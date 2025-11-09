@@ -1,0 +1,1 @@
+{"rsync":{"/vagrant":{"disabled":false,"guestpath":"/vagrant","hostpath":"/devwork/apps/Inception-of-Things/p1","type":"rsync","rsync__auto":true,"__vagrantfile":true,"auto":true,"owner":"vagrant","group":"vagrant"}}}

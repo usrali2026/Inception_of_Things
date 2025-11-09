@@ -1,0 +1,5 @@
+
+# Example Gitlab deployment (use Helm or manifest)
+# See https://docs.gitlab.com/charts/installation/
+# helm repo add gitlab https://charts.gitlab.io/
+# helm install gitlab gitlab/gitlab --namespace gitlab --set global.hosts.domain=localhost
