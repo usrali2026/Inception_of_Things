@@ -4,3 +4,10 @@ build/
 .angular/
 .DS_Store
 *.log
+node_modules/
+dist/
+build/
+.angular/
+.cache/
+.DS_Store
+*.log
