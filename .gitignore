@@ -1,20 +1,23 @@
-node_modules/
-dist/
-build/
-.angular/
-.DS_Store
+# K3s node tokens (sensitive)
+p1/confs/node-token
+**/node-token
+*.token
+
+# Vagrant
+.vagrant/
 *.log
-node_modules/
-dist/
-build/
-.angular/
-.cache/
+
+# Kubernetes configs (may contain sensitive data)
+kubeconfig
+*.kubeconfig
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
-*.log
-node_modules/
-dist/
-build/
-.angular/
-.cache/
-*.log
-.DS_Store
+Thumbs.db
