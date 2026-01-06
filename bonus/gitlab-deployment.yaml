@@ -1,5 +1,35 @@
-
-# Example Gitlab deployment (use Helm or manifest)
-# See https://docs.gitlab.com/charts/installation/
-# helm repo add gitlab https://charts.gitlab.io/
-# helm install gitlab gitlab/gitlab --namespace gitlab --set global.hosts.domain=localhost
+# Gitlab deployment using Helm
+# 
+# Prerequisites:
+# - Helm 3.x installed
+# - K3d cluster running
+# - Sufficient resources (Gitlab requires significant memory)
+#
+# Installation steps:
+# 1. Add Gitlab Helm repository:
+#    helm repo add gitlab https://charts.gitlab.io/
+#    helm repo update
+#
+# 2. Install Gitlab (minimal configuration for local development):
+#    helm install gitlab gitlab/gitlab \
+#      --namespace gitlab \
+#      --set global.hosts.domain=localhost \
+#      --set global.hosts.externalIP=127.0.0.1 \
+#      --set certmanager-issuer.email=your-email@example.com \
+#      --set postgresql.image.tag=13.6.0 \
+#      --set redis.image.tag=6.2.7 \
+#      --set gitlab-runner.install=false \
+#      --timeout 600s
+#
+# 3. Wait for Gitlab to be ready:
+#    kubectl wait --for=condition=available deployment/gitlab-webservice-default -n gitlab --timeout=600s
+#
+# 4. Get Gitlab root password:
+#    kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -o jsonpath='{.data.password}' | base64 -d
+#
+# 5. Access Gitlab:
+#    kubectl port-forward svc/gitlab-webservice-default -n gitlab 8080:80
+#    Open http://localhost:8080 in browser
+#
+# Note: For production use, configure proper ingress, TLS, and resource limits.
+# For minimal setup, consider using Gitlab CE with reduced resources.

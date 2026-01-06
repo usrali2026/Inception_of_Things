@@ -1,23 +1,38 @@
 
-
-
-
-
 # Argo CD application manifest
+# 
+# Before applying this manifest:
+# 1. Replace <your-org>/<your-repo> with your actual GitHub repository
+# 2. Ensure your repository has a 'manifests' directory with Kubernetes YAML files
+# 3. Your Docker image should be available on Docker Hub with tags v1 and v2
+# 4. Example: docker.io/yourusername/myapp:v1 and docker.io/yourusername/myapp:v2
+#
+# To update the version:
+# - Change the image tag in your deployment.yaml in the GitHub repo
+# - Argo CD will automatically sync the changes (if syncPolicy.automated is enabled)
+#
+# To check deployed version:
+# kubectl get deployment -n dev -o jsonpath='{.items[0].spec.template.spec.containers[0].image}'
+#
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: sample-app
+  namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://github.com/<your-org>/<your-repo>
-    targetRevision: HEAD
-    path: manifests
+    repoURL: https://github.com/<your-org>/<your-repo>  # Replace with your repo URL
+    targetRevision: HEAD  # or use a branch like 'main' or 'master'
+    path: manifests  # Path to your Kubernetes manifests in the repo
+    # Optional: specify a specific directory/file
+    # path: manifests/deployment.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: dev
   syncPolicy:
     automated:
-      prune: true
-      selfHeal: true
+      prune: true      # Automatically remove resources that are no longer in Git
+      selfHeal: true   # Automatically sync when cluster state drifts from Git
+    syncOptions:
+      - CreateNamespace=true  # Create namespace if it doesn't exist
