@@ -142,6 +142,7 @@ kubectl apply -f p2/ingress.yaml
 - 🌐 `http://app2.com` → App 2 (3 replicas)
 - 🌐 `http://192.168.56.110` → App 3 (default)
 
+
 #### Part 3: K3d & Argo CD
 
 ```bash
@@ -149,9 +150,31 @@ cd p3
 bash k3d-setup.sh
 kubectl apply -f argocd-namespace.yaml
 kubectl apply -f dev-namespace.yaml
-# Update argocd-app.yaml with your repository URL
 kubectl apply -f argocd-app.yaml
 ```
+
+**Argo CD Workflow & Demonstration:**
+
+- The application in `p3/manifests` is deployed and managed by Argo CD in the `dev` namespace.
+- To update the app version:
+	1. Edit `p3/manifests/deployment.yaml` and change the image tag (e.g., from `v1` to `v2`).
+	2. Commit and push the change to your GitHub repository.
+	3. Argo CD will automatically sync and update the deployment in your cluster.
+- To test the running version:
+	1. Port-forward the service:
+		 ```
+		 kubectl port-forward -n dev svc/sample-app 8890:8888
+		 ```
+	2. In another terminal, run:
+		 ```
+		 curl http://localhost:8890/
+		 ```
+		 You should see a response like `{ "status": "ok", "message": "v1" }` or `"v2"` depending on the deployed version.
+- For evaluation, demonstrate:
+	- Argo CD application status is **Synced** and **Healthy** (`kubectl get applications -n argocd`)
+	- Pod status in the dev namespace (`kubectl get pods -n dev`)
+	- Version update by changing the image tag, committing, pushing, and verifying with curl as above.
+- Make your repository public before evaluation so Argo CD can access it.
 
 ---
 

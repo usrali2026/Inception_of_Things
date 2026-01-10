@@ -11,6 +11,32 @@ This directory contains the Kubernetes manifests for your application, to be dep
 2. Commit and push the change to your GitHub repository.
 3. Argo CD will automatically sync and update the deployment in your cluster.
 
+## How to test the running version
+1. Port-forward the service:
+    ```
+    kubectl port-forward -n dev svc/sample-app 8890:8888
+    ```
+2. In another terminal, run:
+    ```
+    curl http://localhost:8890/
+    ```
+    You should see a response like `{ "status": "ok", "message": "v1" }` or `"v2"` depending on the deployed version.
+
+## Demonstration checklist for evaluation
+- Show Argo CD application status is **Synced** and **Healthy**:
+   ```
+   kubectl get applications -n argocd
+   ```
+- Show pod status in the dev namespace:
+   ```
+   kubectl get pods -n dev
+   ```
+- Show version update by changing the image tag, committing, pushing, and verifying with curl as above.
+
+## Notes
+- Make your repository public before evaluation so Argo CD can access it.
+- You can roll back to v1 by repeating the update process with the v1 tag.
+
 ## Example
 ```
 # Change this line in deployment.yaml:
