@@ -33,3 +33,13 @@
 #
 # Note: For production use, configure proper ingress, TLS, and resource limits.
 # For minimal setup, consider using Gitlab CE with reduced resources.
+
+---
+# Minimal sample resource for validation
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitlab-sample-config
+  namespace: gitlab
+data:
+  example: "This is a sample ConfigMap for validation."

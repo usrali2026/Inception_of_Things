@@ -1,1 +1,1 @@
-{"rsync":{"/vagrant":{"disabled":false,"guestpath":"/vagrant","hostpath":"/devwork/apps/Inception-of-Things/p1","type":"rsync","rsync__auto":true,"__vagrantfile":true,"auto":true,"owner":"vagrant","group":"vagrant"}}}
+{"rsync":{"/vagrant":{"disabled":false,"guestpath":"/vagrant","hostpath":"/home/ali/Documents/Inception_of_Things/p1","type":"rsync","rsync__auto":true,"__vagrantfile":true,"auto":true,"owner":"vagrant","group":"vagrant"}}}

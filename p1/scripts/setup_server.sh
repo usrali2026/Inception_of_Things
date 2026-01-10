@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
-IFACE=${IFACE:-eth1}
+# Detect network interface automatically if not set
+if [ -z "${IFACE:-}" ]; then
+	IFACE=$(ip -o -4 route show to default | awk '{print $5}' | grep -v '^lo$' | head -n1)
+	if [ -z "$IFACE" ]; then
+		echo "[ERROR] Could not detect network interface. Please set IFACE manually."
+		exit 1
+	fi
+fi
 IP=${IP:-$(ip -4 -o addr show "$IFACE" | awk '{print $4}' | cut -d/ -f1)}
 : "${IP:=192.168.56.110}"
 
