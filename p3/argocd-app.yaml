@@ -22,9 +22,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/<your-org>/<your-repo>  # Replace with your repo URL
+    repoURL: https://github.com/usrali2026/Inception_of_Things.git  # Updated to your repo URL
     targetRevision: HEAD  # or use a branch like 'main' or 'master'
-    path: manifests  # Path to your Kubernetes manifests in the repo
+    path: p3/manifests  # Path to your Kubernetes manifests in the repo
     # Optional: specify a specific directory/file
     # path: manifests/deployment.yaml
   destination:
