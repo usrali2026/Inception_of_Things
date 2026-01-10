@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: sample-app
-        image: wil42/playground:v1 # Change to v2 to update version
+        image: wil42/playground:v2 # Changed to v2 to test update
         ports:
         - containerPort: 8888
