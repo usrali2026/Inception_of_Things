@@ -140,10 +140,10 @@ config.vm.box_url = REDACTED
 end
 
 config.vm.define "wilS" do |control|
-control.vm.hostname = "wilS"
+control.vm.hostname = "alrahmouS"
 control.vm.network REDACTED, ip: "192.168.56.110"
 control.vm.provider REDACTED do |v|
-v.customize ["modifyvm", :id, "--name", "wilS"]
+v.customize ["modifyvm", :id, "--name", "alrahmouS"]
 [...]
 end
 config.vm.provision :shell, :inline => SHELL
@@ -152,10 +152,10 @@ SHELL
 control.vm.provision "shell", path: REDACTED
 end
 config.vm.define "wilSW" do |control|
-control.vm.hostname = "wilSW"
+control.vm.hostname = "alrahmouSW"
 control.vm.network REDACTED, ip: "192.168.56.111"
 control.vm.provider REDACTED do |v|
-v.customize ["modifyvm", :id, "--name", "wilSW"]
+v.customize ["modifyvm", :id, "--name", "alrahmouSW"]
 [...]
 end
 config.vm.provision "shell", inline: <<-SHELL
