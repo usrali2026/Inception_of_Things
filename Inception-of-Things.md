@@ -36,12 +36,12 @@ This is a minimal introduction to Kubernetes. The project is designed to get you
 The project is divided into three required parts:
 
 ### Part 1: K3s and Vagrant
-- Set up two VMs using Vagrant (1 CPU, 512–1024 MB RAM each).
-- Machine names: `<login>S` (Server), `<login>SW` (ServerWorker).
-- IPs: Server `192.168.56.110`, ServerWorker `192.168.56.111`.
-- SSH access without password.
-- Install K3s: Server in controller mode, ServerWorker in agent mode.
-- Install and use `kubectl`.
+ Set up two VMs using Vagrant (1 CPU, 512–1024 MB RAM each).
+ Machine names: `alrahmounS` (Server), `alrahmounSW` (ServerWorker).
+ IPs: Server `192.168.56.110`, ServerWorker `192.168.56.111`.
+ SSH access without password.
+ Install K3s: Server in controller mode, ServerWorker in agent mode.
+ Install and use `kubectl`.
 
 **Example Vagrantfile:**
 ```ruby

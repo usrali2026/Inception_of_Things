@@ -49,7 +49,7 @@ $ find . -maxdepth 1 -type d -name "p*" -o -name "bonus"
 | Two VMs using Vagrant | ✅ | ✅ | `p1/Vagrantfile` defines 2 VMs |
 | 1 CPU per VM | ✅ | ✅ | `lv.cpus = 1` in Vagrantfile |
 | 512-1024 MB RAM each | ✅ | ✅ | `lv.memory = 1024` (within range) |
-| Machine names: `<login>S` and `<login>SW` | ✅ | ✅ | `wilS` and `wilSW` |
+| Machine names: `alrahmounS` and `alrahmounSW` | ✅ | ✅ | `alrahmounS` and `alrahmounSW` |
 | Server IP: 192.168.56.110 | ✅ | ✅ | Line 30 in Vagrantfile |
 | Worker IP: 192.168.56.111 | ✅ | ✅ | Line 46 in Vagrantfile |
 | SSH access without password | ✅ | ✅ | `config.ssh.insert_key = false` |

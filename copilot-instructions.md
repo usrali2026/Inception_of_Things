@@ -40,11 +40,11 @@ This guide provides all requirements and actionable steps for implementing the I
 ### 3. Step-by-Step Implementation
 
 #### Part 1: Vagrant & K3s
-- Write a Vagrantfile for two VMs (`<login>S`, `<login>SW`) with dedicated IPs, SSH access, and minimal resources (1 CPU, 512–1024 MB RAM).
-- Provision K3s: Server in controller mode, ServerWorker in agent mode.
-- Install and configure `kubectl` on both VMs.
-- Example Copilot prompt:
 	> "Write a Vagrantfile for two VMs named wilS and wilSW, with IPs 192.168.56.110/111, SSH access, and K3s installed as described in Inception-of-Things.md."
+ Write a Vagrantfile for two VMs (`alrahmounS`, `alrahmounSW`) with dedicated IPs, SSH access, and minimal resources (1 CPU, 512–1024 MB RAM).
+ Provision K3s: Server in controller mode, ServerWorker in agent mode.
+ Install and configure `kubectl` on both VMs.
+ Example Copilot prompt:
 
 #### Part 2: K3s & Three Web Apps
 - Use one VM with K3s in server mode.
