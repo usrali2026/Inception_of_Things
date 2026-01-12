@@ -76,12 +76,14 @@ Before you begin, ensure you have the following installed:
 
 | Component | Minimum | Recommended |
 |-----------|----------|-------------|
-| **RAM** | 4GB | 8GB+ |
-| **CPU** | 2 cores | 4+ cores |
+| **RAM (host)** | 4GB | 8GB+ |
+| **CPU (host)** | 2 cores | 4+ cores |
 | **Disk** | 20GB | 50GB+ |
-| **Part 1 VMs** | 2GB RAM | 4GB RAM |
+| **Part 1 VMs (each)** | 1 CPU, 512MB RAM<sup>†</sup> | 1 CPU, 1024MB RAM |
 | **Part 3 (Docker)** | 2GB RAM | 4GB RAM |
 | **Bonus (Gitlab)** | +4GB RAM | +8GB RAM |
+
+<sup>†</sup> <sub>Subject minimum for each Vagrant VM: 1 CPU, 512MB RAM (or 1024MB). See project subject for details.</sub>
 
 ### Verify Installation
 
