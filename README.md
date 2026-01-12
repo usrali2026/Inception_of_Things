@@ -33,12 +33,14 @@
 
 ## ✨ Features
 
-- 🖥️ **K3s Cluster Setup** - Automated VM provisioning with Vagrant
-- 🌐 **Multi-App Deployment** - Three web applications with Ingress routing
-- 🔄 **GitOps with Argo CD** - Automated application deployment and sync
-- 🐳 **K3d Integration** - Lightweight Kubernetes for local development
-- 🔧 **Complete Automation** - One-command deployment script
-- 📝 **Comprehensive Docs** - Detailed guides and troubleshooting
+ - 🖥️ **K3s Cluster Setup** - Automated VM provisioning with Vagrant
+ - 🌐 **Multi-App Deployment** - Three web applications with Ingress routing
+ - 🔄 **GitOps with Argo CD** - Automated application deployment and auto-sync
+ - 🐳 **K3d Integration** - Lightweight Kubernetes for local development
+ - 🔧 **Complete Automation** - One-command deployment script (`deploy_all.sh`) with bonus Gitlab integration
+ - 📝 **Comprehensive Docs** - Detailed guides, troubleshooting, and validation steps
+ - 🛡️ **Security Best Practices** - No hardcoded secrets, `.gitignore` for sensitive files, resource limits, health checks
+ - 🧪 **Validation & Compliance** - Automated checks, compliance review, and demonstration steps
 
 ---
 
@@ -106,11 +108,11 @@ cd Inception_of_Things
 # Run automated deployment
 ./deploy_all.sh
 
-# Or with bonus (Gitlab)
+# Or with bonus (Gitlab integration)
 ./deploy_all.sh --with-bonus
 ```
 
-> 💡 **Tip**: The script automatically checks prerequisites and guides you through the process.
+> 💡 **Tip**: The script checks prerequisites, guides you, and validates each step. Bonus Gitlab integration is fully automated if prerequisites are met.
 
 ### 📖 Manual Deployment
 
@@ -179,7 +181,11 @@ kubectl apply -f argocd-app.yaml
 ---
 
 ## 📚 Detailed Documentation
-
+See [DEPLOYMENT.md](DEPLOYMENT.md), [QUICK_START.md](QUICK_START.md), and folder-level READMEs for:
+- Step-by-step manual deployment
+- Argo CD workflow and demonstration
+- Gitlab integration and CI/CD pipeline
+- Validation and troubleshooting
 For comprehensive deployment guides and advanced topics:
 
 | Document | Description |
@@ -213,22 +219,47 @@ Inception_of_Things/
 │   ├── k3d-setup.sh               # K3d installation script
 │   ├── argocd-namespace.yaml      # Argo CD namespace
 │   ├── dev-namespace.yaml         # Dev namespace
-│   └── argocd-app.yaml            # Argo CD application
+│   ├── argocd-app.yaml            # Argo CD application
+│   └── manifests/                 # App manifests for Argo CD
 │
 ├── 📁 bonus/                       # Bonus: Gitlab
 │   ├── gitlab-namespace.yaml      # Gitlab namespace
-│   └── gitlab-deployment.yaml     # Gitlab deployment guide
+│   ├── gitlab-deployment.yaml     # Gitlab deployment guide
+│   ├── deploy_gitlab.sh           # Gitlab automation script
+│   └── .gitlab-ci.yml             # Sample Gitlab CI/CD pipeline
 │
-├── 🚀 deploy_all.sh                # Automated deployment script
+├── 🚀 deploy_all.sh                # Automated deployment script (supports --with-bonus)
 ├── 📖 README.md                    # This file
-├── 📘 DEPLOYMENT.md                 # Detailed deployment guide
-└── ⚡ QUICK_START.md                # Quick reference
+├── 📘 DEPLOYMENT.md                # Detailed deployment guide
+├── ⚡ QUICK_START.md                # Quick reference
+└── 📝 COMPLIANCE_REVIEW.md          # Compliance and validation summary
 ```
 
 ---
 
 ## ✅ Validation
+Run these checks before submission or merging changes:
+```bash
+# Validate Vagrantfile
+vagrant validate
 
+# Validate Kubernetes manifests
+yamllint p1/ p2/ p3/
+
+# Check shell scripts
+shellcheck *.sh
+
+# Test cluster setup
+kubectl get ns
+kubectl get pods -n dev
+
+# Argo CD sync status
+argocd app list
+
+# Gitlab deployment (bonus)
+kubectl get pods -n gitlab
+```
+See [COMPLIANCE_REVIEW.md](COMPLIANCE_REVIEW.md) for full checklist and evidence.
 After deployment, verify everything is working:
 
 ```bash
@@ -261,7 +292,7 @@ kubectl get applications -n argocd
 ---
 
 ## 🐛 Troubleshooting
-
+See [QUICK_START.md](QUICK_START.md) and folder-level READMEs for troubleshooting tips, common errors, and quick fixes.
 ### Common Issues & Solutions
 
 <details>
@@ -358,15 +389,14 @@ kubectl describe application <app-name> -n argocd
 
 ## 🔒 Security
 
-### Best Practices
 
-- ✅ **Sensitive Files**: Node tokens are excluded via `.gitignore`
-- ✅ **No Hardcoded Secrets**: All credentials use environment variables
-- ✅ **Resource Limits**: All deployments have CPU/memory limits
-- ✅ **Health Checks**: Liveness and readiness probes configured
+### Best Practices
+- ✅ Sensitive files excluded via `.gitignore`
+- ✅ No hardcoded secrets; use environment variables
+- ✅ Resource limits and health checks on all deployments
+- ✅ Security scan and validation for all infrastructure code
 
 ### Security Checklist
-
 - [ ] Never commit sensitive credentials
 - [ ] Use proper secret management for production
 - [ ] Regularly update container images
@@ -376,7 +406,10 @@ kubectl describe application <app-name> -n argocd
 ---
 
 ## 📖 Additional Resources
-
+See also:
+- [bonus/README.md](bonus/README.md) for Gitlab integration and CI/CD pipeline details
+- [p3/manifests/README.md](p3/manifests/README.md) for Argo CD demonstration and workflow
+- [COMPLIANCE_REVIEW.md](COMPLIANCE_REVIEW.md) for compliance evidence and validation
 ### Official Documentation
 
 | Tool | Documentation |
