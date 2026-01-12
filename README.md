@@ -28,6 +28,7 @@
 - [🐛 Troubleshooting](#-troubleshooting)
 - [🔒 Security](#-security)
 - [📖 Additional Resources](#-additional-resources)
+- [🌍 Global Configuration and Explanation](#-global-configuration-and-explanation)
 
 ---
 
@@ -237,50 +238,125 @@ Inception_of_Things/
 
 ---
 
-## ✅ Validation
-Run these checks before submission or merging changes:
-```bash
+
+## ✅ Validation & Testing
+
+Follow these steps to validate and demonstrate each part of the project. All commands are to be run from the root of the repository unless otherwise specified.
+
+### Part 1: K3s and Vagrant
+
+#### Configuration Check
+- Ensure `p1/Vagrantfile` exists and defines two VMs: `alrahmouS` and `alrahmouSW`.
+- VM resources: 1 CPU, 1024MB RAM each.
+- Network interface (enp0s8) IPs: 192.168.56.110 (alrahmouS), 192.168.56.111 (alrahmouSW).
+- Hostnames: alrahmouS and alrahmouSW.
+- SSH is passwordless. K3s install scripts present.
+
+#### Usage & Validation
+```sh
+cd p1
+vagrant up
+vagrant status
+vagrant ssh alrahmouS -c "echo 'Connected to alrahmouS'"
+vagrant ssh alrahmouSW -c "echo 'Connected to alrahmouSW'"
+vagrant ssh alrahmouS -c "ip addr show eth1 | grep 'inet '"
+vagrant ssh alrahmouSW -c "ip addr show eth1 | grep 'inet '"
+vagrant ssh alrahmouS -c "hostname"
+vagrant ssh alrahmouSW -c "hostname"
+vagrant ssh alrahmouS -c "k3s --version || k3s -v"
+vagrant ssh alrahmouSW -c "k3s --version || k3s -v"
+vagrant ssh alrahmouS -c "kubectl get nodes -o wide"
+```
+
+---
+
+### Part 2: Application Deployment
+
+#### Configuration Check
+- Ensure `p2/` contains `app1-deployment.yaml`, `app2-deployment.yaml`, `app3-deployment.yaml`, `ingress.yaml`.
+- Check each manifest for correct app name, image, and replica count (app2: 3 replicas).
+- Verify ingress rules for app1.com, app2.com, and default to app3.
+
+#### Usage & Validation
+```sh
+vagrant ssh alrahmouS -c "kubectl get nodes -o wide"
+vagrant ssh alrahmouS -c "kubectl get all -n kube-system"
+vagrant ssh alrahmouS -c "kubectl get deployments -n default"
+vagrant ssh alrahmouS -c "kubectl get pods -n default"
+vagrant ssh alrahmouS -c "kubectl get ingress -n default"
+vagrant ssh alrahmouS -c "curl -H 'Host: app1.com' http://192.168.56.110"
+vagrant ssh alrahmouS -c "curl -H 'Host: app2.com' http://192.168.56.110"
+vagrant ssh alrahmouS -c "curl -H 'Host: app3.com' http://192.168.56.110"
+```
+
+---
+
+### Part 3: K3d & Argo CD
+
+#### Configuration Check
+- Ensure `p3/` contains `argocd-app.yaml`, `argocd-namespace.yaml`, `dev-namespace.yaml`, `manifests/`, `k3d-setup.sh`.
+- Check `argocd-app.yaml` for correct repoURL, path, and syncPolicy.
+- Verify Docker image names and tags (v1, v2) in manifests.
+
+#### Usage & Validation
+```sh
+cd p3
+./k3d-setup.sh
+kubectl get ns # Should list 'argocd' and 'dev'
+kubectl get pods -n dev
+kubectl get svc --all-namespaces
+kubectl get pods -n argocd
+# Access Argo CD UI in browser (URL and credentials provided by group)
+# Confirm your repo name includes your login (e.g., usrali2026/Inception_of_Things)
+# Confirm your Docker image is named with your login and has v1 and v2 tags on Docker Hub
+# Edit manifest to v2, commit/push, sync in Argo CD, verify update
+```
+
+---
+
+### Bonus: Gitlab Integration
+
+#### Configuration Check
+- Ensure `bonus/` contains Gitlab deployment/configuration files.
+- Check `gitlab-namespace.yaml`, `gitlab-deployment.yaml`, and integration steps.
+
+#### Usage & Validation
+```sh
+# Create a new repository, add code, verify in Gitlab UI.
+# Use Gitlab repo in Argo CD, repeat application update workflow.
+# If sync and version change work, bonus is validated.
+```
+
+---
+
+### General Validation Commands
+```sh
 # Validate Vagrantfile
 vagrant validate
-
 # Validate Kubernetes manifests
 yamllint p1/ p2/ p3/
-
 # Check shell scripts
 shellcheck *.sh
-
 # Test cluster setup
 kubectl get ns
 kubectl get pods -n dev
-
 # Argo CD sync status
 argocd app list
-
 # Gitlab deployment (bonus)
 kubectl get pods -n gitlab
-```
-See [COMPLIANCE_REVIEW.md](COMPLIANCE_REVIEW.md) for full checklist and evidence.
-After deployment, verify everything is working:
-
-```bash
 # Check cluster nodes
 kubectl get nodes
-
 # Check all pods
 kubectl get pods --all-namespaces
-
 # Check services
 kubectl get services --all-namespaces
-
 # Check ingress
 kubectl get ingress --all-namespaces
-
 # Check Argo CD applications
 kubectl get applications -n argocd
 ```
 
-### Expected Results
-
+#### Expected Results
 ```
 ✅ All nodes in Ready state
 ✅ All pods running (Running status)
@@ -288,6 +364,8 @@ kubectl get applications -n argocd
 ✅ Ingress routes configured
 ✅ Argo CD applications synced
 ```
+
+See [COMPLIANCE_REVIEW.md](COMPLIANCE_REVIEW.md) for the full checklist and evidence.
 
 ---
 
@@ -453,3 +531,21 @@ This project is part of a System Administration course exercise.
 [⬆ Back to Top](#-inception-of-things)
 
 </div>
+
+---
+
+## 🌍 Global Configuration and Explanation
+
+Those being evaluated should be able to explain simply:
+
+### Basic Operation of K3s
+K3s is a lightweight Kubernetes distribution designed for resource-constrained environments and edge computing. It simplifies Kubernetes installation and management, making it ideal for learning and small-scale deployments. K3s includes all the essential Kubernetes components and can run on a single VM or multiple nodes.
+
+### Basic Operation of Vagrant
+Vagrant is a tool for building and managing virtual machine environments. It uses simple configuration files (Vagrantfile) to automate VM creation, provisioning, and networking. Vagrant helps ensure consistent development environments and is widely used for testing infrastructure setups.
+
+### Basic Operation of K3d
+K3d is a utility that runs K3s clusters inside Docker containers. It allows rapid creation and management of Kubernetes clusters locally, making it perfect for development and CI/CD pipelines. K3d leverages Docker for isolation and resource management.
+
+### What is Continuous Integration and Argo CD
+Continuous Integration (CI) is a development practice where code changes are automatically built, tested, and integrated into shared repositories. This ensures rapid feedback and higher code quality. Argo CD is a GitOps tool for Kubernetes that automates application deployment and synchronization from a Git repository. It continuously monitors the repository and applies changes to the cluster, enabling automated, declarative, and auditable deployments.
