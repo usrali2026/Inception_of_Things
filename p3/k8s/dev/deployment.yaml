@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alrahmou-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alrahmou-app
+  template:
+    metadata:
+      labels:
+        app: alrahmou-app
+    spec:
+      containers:
+        - name: alrahmou-app
+          image: wil42/playground:v1   # later switch to :v2 in Git
+          ports:
+            - containerPort: 8888
