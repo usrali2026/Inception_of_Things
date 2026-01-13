@@ -4,8 +4,9 @@ kind: Ingress
 metadata:
   name: apps-ingress
   annotations:
-    kubernetes.io/ingress.class: "traefik"
+    kubernetes.io/ingress.class: "traefik"  # for backward compatibility
 spec:
+  ingressClassName: traefik
   rules:
     - host: app1.com
       http:

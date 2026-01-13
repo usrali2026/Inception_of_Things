@@ -12,15 +12,15 @@ echo "Waiting for K3s system pods to come up..."
 sleep 40
 
 # Optional: wait until kube-system pods are ready
-kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=180s || true
+sudo kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=180s || true
 
 # Apply applications (Deployments + Services)
-kubectl apply -f /vagrant/confs/apps.yaml
+sudo kubectl apply -f /vagrant/confs/apps.yaml
 
 # Wait a bit to ensure Services exist before Ingress
 sleep 10
 
 # Apply Ingress
-kubectl apply -f /vagrant/confs/ingress.yaml
+sudo kubectl apply -f /vagrant/confs/ingress.yaml
 
 echo "K3s + 3 apps + Ingress deployed on alrahmouS"
