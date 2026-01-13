@@ -9,8 +9,6 @@ This should:
 
     Start alrahmouS and alrahmouSW with IPs 192.168.56.110 and 192.168.56.111.
 
-​
-
 Run setup_server.sh on alrahmouS (K3s server).
 
 Run setup_worker.sh on alrahmouSW (K3s agent joining server).
