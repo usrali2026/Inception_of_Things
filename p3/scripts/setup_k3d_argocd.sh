@@ -18,7 +18,7 @@ if ! k3d cluster list | grep -q "${CLUSTER_NAME}"; then
     --wait
 else
   echo "k3d cluster ${CLUSTER_NAME} already exists."
-endif
+fi
 
 # Use k3d context
 kubectl config use-context "k3d-${CLUSTER_NAME}"

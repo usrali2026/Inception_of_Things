@@ -46,7 +46,7 @@ fi
 # Optional: install argocd CLI (nice for debugging)
 if ! command -v argocd >/dev/null 2>&1; then
   echo "Installing Argo CD CLI..."
-  ARGOCD_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep tag_name | cut -d '\"' -f4)
+  ARGOCD_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep tag_name | cut -d '"' -f4)
   curl -sSL -o argocd "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
   chmod +x argocd
   sudo mv argocd /usr/local/bin/argocd
