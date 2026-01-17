@@ -1,25 +1,28 @@
 # p2/Vagrantfile
 # -*- mode: ruby -*-
 Vagrant.configure("2") do |config|
-  config.vm.box = "generic/ubuntu2204"
+  config.vm.box         = "generic/ubuntu2404"
+  config.vm.box_version = ">= 4.2.8"
+
+  config.ssh.insert_key = false
+
+  config.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__auto: true
+  config.vm.synced_folder "./confs", "/vagrant/confs", type: "rsync"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.cpus   = 1
+    vb.memory = 2048   # you can try 1024 if you want to be minimal
+  end
 
   config.vm.define "alrahmouS" do |vm|
     vm.vm.hostname = "alrahmouS"
     vm.vm.network "private_network", ip: "192.168.56.110"
 
-    vm.vm.synced_folder "./confs", "/vagrant/confs", type: "rsync"
-    vm.vm.provider :libvirt do |lv|
-      lv.memory = 2048   # you can drop to 1024 if needed
-      lv.cpus   = 1
-      lv.machine_type = "pc"
-      lv.graphics_type = "vnc"
-      lv.video_type = "qxl"
-    end
-
     # Basic tools
     vm.vm.provision "shell", inline: <<-SHELL
-      sudo apt-get update -y
-      sudo apt-get install -y curl
+      set -eux
+      apt-get update -y
+      apt-get install -y curl
     SHELL
 
     # Install K3s and deploy apps + ingress
