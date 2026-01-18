@@ -1,4 +1,3 @@
-# p1/Vagrantfile
 Vagrant.configure("2") do |config|
   # Base box
   config.vm.box         = "generic/ubuntu2404"
@@ -10,7 +9,7 @@ Vagrant.configure("2") do |config|
   # Sync folder
   config.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__auto: true
 
-  # VirtualBox provider
+  # VirtualBox provider (global defaults)
   config.vm.provider "virtualbox" do |vb|
     vb.gui     = false
     vb.memory  = 1024
@@ -23,7 +22,14 @@ Vagrant.configure("2") do |config|
     m.vm.hostname = "alrahmouS"
     # Private network for cluster communication
     m.vm.network "private_network", ip: "192.168.56.110"
-    m.vm.provision "shell", path: "scripts/setup_server.sh"
+
+    # Explicitly set interface/IP for K3s
+    m.vm.provision "shell",
+      path: "scripts/setup_server.sh",
+      env: {
+        "IFACE" => "enp0s8",
+        "IP"    => "192.168.56.110"
+      }
   end
 
   # ---------- Worker Node ----------
@@ -31,6 +37,14 @@ Vagrant.configure("2") do |config|
     m.vm.hostname = "alrahmouSW"
     # Private network for cluster communication
     m.vm.network "private_network", ip: "192.168.56.111"
-    m.vm.provision "shell", path: "scripts/setup_worker.sh"
+
+    # Explicitly set interface/IP for K3s
+    m.vm.provision "shell",
+      path: "scripts/setup_worker.sh",
+      env: {
+        "IFACE"      => "enp0s8",
+        "IP"         => "192.168.56.111",
+        "SERVER_IP"  => "192.168.56.110"
+      }
   end
 end

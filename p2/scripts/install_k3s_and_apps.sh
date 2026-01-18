@@ -1,6 +1,5 @@
-# p2/scripts/install_k3s_and_apps.sh
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 # Install K3s server (Traefik ingress enabled by default)
 curl -sfL https://get.k3s.io | sh -s - server --node-name alrahmouS
@@ -8,10 +7,12 @@ curl -sfL https://get.k3s.io | sh -s - server --node-name alrahmouS
 # Make kubectl available easily
 sudo ln -sf /usr/local/bin/kubectl /usr/bin/kubectl || true
 
-echo "Waiting for K3s system pods to come up..."
-sleep 40
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-# Optional: wait until kube-system pods are ready
+echo "Waiting for K3s system pods to come up..."
+sleep 30
+
+# Wait until kube-system pods are ready (best-effort)
 sudo kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=180s || true
 
 # Apply applications (Deployments + Services)
