@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 # Detect network interface automatically if not set
@@ -17,9 +16,15 @@ IP=${IP:-$(ip -4 -o addr show "$IFACE" | awk '{print $4}' | cut -d/ -f1)}
 sudo apt-get update -y
 sudo apt-get install -y curl ca-certificates
 
-# K3s server; advertise on host-only NIC
-curl -sfL https://get.k3s.io \
-  | INSTALL_K3S_EXEC="server --write-kubeconfig-mode 644 --node-ip ${IP} --advertise-address ${IP} --flannel-iface ${IFACE}" sh -
+# If k3s already installed, skip reinstall
+if systemctl list-unit-files | grep -q '^k3s.service'; then
+  echo "[INFO] k3s already installed, skipping install"
+else
+  echo "[INFO] Installing k3s server on ${IP} (${IFACE})"
+  curl -sfL https://get.k3s.io \
+    | INSTALL_K3S_EXEC="server --write-kubeconfig-mode 644 --node-ip ${IP} --advertise-address ${IP} --tls-san ${IP}" \
+      sh -
+fi
 
 # Ensure confs directory exists and share the join token to the synced folder
 sudo mkdir -p /vagrant/confs
