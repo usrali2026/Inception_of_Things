@@ -1,51 +1,53 @@
+# P1 - K3s and Vagrant
+# 2 VMs (server + worker) on Ubuntu 22.04 with libvirt
+# Server IP: 192.168.56.110, Worker IP: 192.168.56.111
+
+cluster_token = "IOT42ClusterToken"
+
 Vagrant.configure("2") do |config|
-  config.ssh.forward_agent = false
-
-  # Base box
+  # Libvirt-capable Ubuntu 22.04 box
   config.vm.box = "generic/ubuntu2204"
-
-  # Disable automatic SSH key insertion
   config.ssh.insert_key = false
 
-  # Sync folder
-  config.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__auto: true
+  # -------- K3s SERVER (controller) --------
+  config.vm.define "alrahmouS" do |srv|
+    srv.vm.hostname = "alrahmouS"
+    srv.vm.network "private_network", ip: "192.168.56.110"
 
-  # VirtualBox provider (global defaults)
-  config.vm.provider "virtualbox" do |vb|
-    vb.gui     = false
-    vb.memory  = 1024
-    vb.cpus    = 1
-    vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
-  end
+    srv.vm.provider :libvirt do |v|
+      v.cpus   = 1
+      v.memory = 1024
+      # optional nic model tweak if needed:
+      # v.nic_model_type = "virtio"
+    end
 
-  # ---------- Server Node ----------
-  config.vm.define "alrahmouS" do |m|
-    m.vm.hostname = "alrahmouS"
-    # Private network for cluster communication
-    m.vm.network "private_network", ip: "192.168.56.110"
-
-    # Explicitly set interface/IP for K3s
-    m.vm.provision "shell",
-      path: "scripts/setup_server.sh",
+    # K3s server provision script
+    srv.vm.provision "shell",
+      path: "scripts/k3s_server.sh",
       env: {
-        "IFACE" => "enp0s8",
-        "IP"    => "192.168.56.110"
+        "SERVER_IP"     => "192.168.56.110",
+        "CLUSTER_TOKEN" => cluster_token
       }
   end
 
-  # ---------- Worker Node ----------
-  config.vm.define "alrahmouSW" do |m|
-    m.vm.hostname = "alrahmouSW"
-    # Private network for cluster communication
-    m.vm.network "private_network", ip: "192.168.56.111"
+  # -------- K3s WORKER (agent) --------
+  config.vm.define "alrahmouSW" do |wrk|
+    wrk.vm.hostname = "alrahmouSW"
+    wrk.vm.network "private_network", ip: "192.168.56.111"
 
-    # Explicitly set interface/IP for K3s
-    m.vm.provision "shell",
-      path: "scripts/setup_worker.sh",
+    wrk.vm.provider :libvirt do |v|
+      v.cpus   = 1
+      v.memory = 1024
+      # v.nic_model_type = "virtio"
+    end
+
+    # K3s worker provision script
+    wrk.vm.provision "shell",
+      path: "scripts/k3s_worker.sh",
       env: {
-        "IFACE"      => "enp0s8",
-        "IP"         => "192.168.56.111",
-        "SERVER_IP"  => "192.168.56.110"
+        "SERVER_IP"     => "192.168.56.110",
+        "WORKER_IP"     => "192.168.56.111",
+        "CLUSTER_TOKEN" => cluster_token
       }
   end
 end
