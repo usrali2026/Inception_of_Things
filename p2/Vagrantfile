@@ -1,36 +1,23 @@
-# p2/Vagrantfile
+# P2 - K3s and three simple applications
+
 Vagrant.configure("2") do |config|
+  # Libvirt-capable Ubuntu 22.04 box
   config.vm.box = "generic/ubuntu2204"
+  config.ssh.insert_key = false
 
-  config.vm.define "alrahmouS" do |vm|
-    vm.vm.hostname = "alrahmouS"
+  config.vm.define "alrahmouS" do |srv|
+    srv.vm.hostname = "alrahmouS"
+    srv.vm.network "private_network", ip: "192.168.56.110"
 
-    # ---------- Networking ----------
-    # Private network for host-to-VM access
-    vm.vm.network "private_network", ip: "192.168.56.110"
-
-    # Forward Traefik NodePort ports to host for easy curl access
-    vm.vm.network "forwarded_port", guest: 31763, host: 8080  # HTTP
-    vm.vm.network "forwarded_port", guest: 30960, host: 8443  # HTTPS
-
-    # ---------- Sync folder ----------
-    vm.vm.synced_folder "./confs", "/vagrant/confs", type: "rsync", rsync__auto: true
-
-    # ---------- VirtualBox Provider ----------
-    vm.vm.provider "virtualbox" do |vb|
-      vb.memory = 2048
-      vb.cpus   = 1
-      vb.gui    = false
-      vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+    srv.vm.provider :libvirt do |v|
+      v.cpus   = 1
+      v.memory = 1024
     end
 
-    # ---------- Basic tools ----------
-    vm.vm.provision "shell", inline: <<-SHELL
-      sudo apt-get update -y
-      sudo apt-get install -y curl
-    SHELL
-
-    # ---------- K3s + apps ----------
-    vm.vm.provision "shell", path: "scripts/install_k3s_and_apps.sh"
+    srv.vm.provision "shell",
+      path: "scripts/install_k3s.sh",
+      env: {
+        "SERVER_IP" => "192.168.56.110"
+      }
   end
 end
