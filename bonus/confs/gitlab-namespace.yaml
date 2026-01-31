@@ -1,5 +1,0 @@
-# bonus/confs/gitlab-namespace.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: gitlab
