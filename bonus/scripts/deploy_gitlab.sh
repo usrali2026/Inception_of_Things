@@ -1,50 +1,67 @@
-#!/usr/bin/env bash
-# Automated GitLab deployment script for K3d/ArgoCD lab
-# Requirements: helm, kubectl, k3d cluster running (from p3)
+#!/bin/bash
 
 set -e
 
-NAMESPACE=gitlab
-RELEASE=gitlab
-DOMAIN=localhost
-EMAIL="your-email@example.com"
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="${SCRIPT_DIR}/../.."
+echo -e "${YELLOW}Deploying GitLab...${NC}"
 
-# Use k3d cluster context created in p3 (adjust name if needed)
-kubectl config use-context "k3d-k3d-iot" || true
-
-# Create gitlab namespace if it doesn't exist
-kubectl apply -f "${SCRIPT_DIR}/../confs/gitlab-namespace.yaml"
-
-# Ensure Helm is installed
-if ! command -v helm >/dev/null 2>&1; then
-  echo "Helm not found, installing..."
-  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-fi
-
-# Add GitLab Helm repo
-helm repo add gitlab https://charts.gitlab.io/ || true
+# Add GitLab Helm repository
+echo "Adding GitLab Helm repository..."
+helm repo add gitlab https://charts.gitlab.io/
 helm repo update
 
-# Install GitLab with minimal config for local use
-helm upgrade --install "$RELEASE" gitlab/gitlab \
-  --namespace "$NAMESPACE" \
-  --set global.hosts.domain="$DOMAIN" \
-  --set global.hosts.externalIP=127.0.0.1 \
-  --set certmanager-issuer.email="$EMAIL" \
-  --set gitlab-runner.install=false \
-  --timeout 600s
+# Check if GitLab is already installed
+if helm list -n gitlab | grep -q gitlab; then
+    echo -e "${YELLOW}GitLab already installed. Upgrading...${NC}"
+    helm upgrade gitlab gitlab/gitlab \
+        -n gitlab \
+        -f bonus/confs/gitlab-values.yaml \
+        --timeout 600s
+else
+    echo "Installing GitLab..."
+    helm install gitlab gitlab/gitlab \
+        -n gitlab \
+        -f bonus/confs/gitlab-values.yaml \
+        --timeout 600s
+fi
 
-# Wait for GitLab webservice to be available
-kubectl wait --for=condition=available deployment/gitlab-webservice-default -n "$NAMESPACE" --timeout=600s || true
+echo "Waiting for GitLab pods to be ready (this may take 5-10 minutes)..."
+kubectl wait --for=condition=ready pod \
+    -l app=webservice \
+    -n gitlab \
+    --timeout=900s 2>/dev/null || echo "Continuing..."
 
-# Get GitLab root password
-echo "GitLab root password:"
-kubectl get secret gitlab-gitlab-initial-root-password -n "$NAMESPACE" -o jsonpath='{.data.password}' | base64 -d; echo
+# Check pod status
+echo ""
+echo -e "${YELLOW}GitLab pod status:${NC}"
+kubectl get pods -n gitlab
 
-# Port-forward for local browser access
-kubectl port-forward svc/gitlab-webservice-default -n "$NAMESPACE" 8080:80 &
-echo "GitLab is accessible at http://localhost:8080"
-echo "Create a project there and point an Argo CD Application to its Git repo URL."
+# Wait a bit more for all services
+sleep 30
+
+# Get root password
+echo ""
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}  GitLab Deployed Successfully!${NC}"
+echo -e "${GREEN}========================================${NC}"
+echo ""
+echo -e "GitLab root password:"
+kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -o jsonpath='{.data.password}' | base64 --decode
+echo ""
+echo ""
+
+# Start port-forward in background
+echo -e "${YELLOW}Starting port-forward to GitLab...${NC}"
+pkill -f "port-forward.*gitlab-webservice" 2>/dev/null || true
+kubectl port-forward -n gitlab svc/gitlab-webservice-default 8080:8181 > /dev/null 2>&1 &
+
+echo -e "${GREEN}GitLab is accessible at: http://localhost:8080${NC}"
+echo -e "Username: ${YELLOW}root${NC}"
+echo ""
+echo -e "${YELLOW}Note: GitLab may take a few more minutes to be fully ready.${NC}"
+echo -e "${YELLOW}If the page doesn't load immediately, wait a bit and try again.${NC}"

@@ -1,0 +1,84 @@
+# GitLab configuration optimized for local development
+global:
+  # Domain configuration
+  hosts:
+    domain: localhost
+    externalIP: 127.0.0.1
+    https: false
+  
+  # Use community edition
+  edition: ce
+  
+  # Ingress configuration
+  ingress:
+    enabled: false
+    configureCertmanager: false
+  
+  # Initial root password (optional)
+  initialRootPassword:
+    secret: gitlab-gitlab-initial-root-password
+  
+  # Time zone
+  time_zone: UTC
+  
+  # Application settings
+  appConfig:
+    enableUsagePing: false
+    enableSeatLink: false
+    enableImpersonation: true
+
+# Disable cert-manager (not needed for local)
+certmanager:
+  install: false
+
+# Disable nginx-ingress (using k3d loadbalancer)
+nginx-ingress:
+  enabled: false
+
+# Prometheus monitoring (optional, can disable to save resources)
+prometheus:
+  install: false
+
+# GitLab Runner (optional)
+gitlab-runner:
+  install: false
+
+# PostgreSQL configuration
+postgresql:
+  image:
+    tag: 13.6.0
+  metrics:
+    enabled: false
+
+# Redis configuration
+redis:
+  metrics:
+    enabled: false
+
+# Registry configuration (optional, disable to save resources)
+registry:
+  enabled: true
+  hpa:
+    minReplicas: 1
+    maxReplicas: 1
+
+# GitLab Shell
+gitlab-shell:
+  minReplicas: 1
+  maxReplicas: 1
+
+# Webservice configuration
+webservice:
+  minReplicas: 1
+  maxReplicas: 1
+
+# Sidekiq configuration
+sidekiq:
+  minReplicas: 1
+  maxReplicas: 1
+
+# Gitaly configuration
+gitaly:
+  persistence:
+    enabled: true
+    size: 10Gi
