@@ -50,14 +50,18 @@ fi
 echo -e "${GREEN}✓ All prerequisites installed${NC}"
 echo ""
 
+# Name of the existing cluster
+CLUSTER_NAME="iot-bonus"
+CONTEXT_NAME="k3d-iot-bonus"
+
 # Check if k3d cluster exists
-if ! k3d cluster list | grep -q "k3d-iot"; then
+if ! k3d cluster list | grep -q "${CLUSTER_NAME}"; then
     echo -e "${YELLOW}Creating k3d cluster...${NC}"
-    k3d cluster create k3d-iot --api-port 6550 -p "8080:80@loadbalancer" --agents 2
+    k3d cluster create "${CLUSTER_NAME}" --api-port 6550 -p "8080:80@loadbalancer" --agents 2
     kubectl cluster-info
 else
     echo -e "${GREEN}✓ k3d cluster already exists${NC}"
-    kubectl config use-context k3d-k3d-iot
+    kubectl config use-context "${CONTEXT_NAME}"
 fi
 
 # Create namespaces
@@ -102,3 +106,4 @@ echo "2. Create a new project called 'iot-app'"
 echo "3. Push deployment.yaml and service.yaml from bonus/confs/"
 echo "4. Apply the ArgoCD application: kubectl apply -f bonus/confs/argocd-app-gitlab.yaml"
 echo "5. Verify the app is synced in ArgoCD"
+
