@@ -1,3 +1,19 @@
+# Vagrant
 **/.vagrant/
-p1/confs/*.token
+
+# Editor / OS junk
+.DS_Store
+*~
 *.swp
+*.swo
+
+# Logs / temp
+*.log
+tmp/
+.cache/
+
+# Avoid committing kube/argocd local credentials
+kubeconfig*
+**/kubeconfig*
+*.kubeconfig
+.argocd/
