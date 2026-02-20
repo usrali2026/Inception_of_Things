@@ -1,53 +1,59 @@
-# P1 - K3s and Vagrant
-# 2 VMs (server + worker) on Ubuntu 22.04 with libvirt
-# Server IP: 192.168.56.110, Worker IP: 192.168.56.111
+# p1/Vagrantfile
+# Inception-of-Things (IoT) - Part 1
+# 2 machines via Vagrant: alrahmouS (server) and alrahmouSW (worker)
+# Required IPs: 192.168.56.110 / 192.168.56.111 [file:1]
 
-cluster_token = "IOT42ClusterToken"
+CLUSTER_TOKEN = "IOT42ClusterToken"
 
 Vagrant.configure("2") do |config|
-  # Libvirt-capable Ubuntu 22.04 box
-  config.vm.box = "generic/ubuntu2204"
+  # "latest stable" distro: pick what you want; 24.04 is a safe choice. [file:1]
+  config.vm.box = "bento/ubuntu-24.04"
+
+  # Keep default vagrant key behavior (passwordless `vagrant ssh`). [file:1]
   config.ssh.insert_key = false
 
-  # -------- K3s SERVER (controller) --------
+  # ---- SERVER (controller) ----
   config.vm.define "alrahmouS" do |srv|
-    srv.vm.hostname = "alrahmouS"
-    srv.vm.network "private_network", ip: "192.168.56.110"
+    srv.vm.hostname = "alrahmouS" # login + "S" [file:1]
+
+    srv.vm.network "private_network",
+      ip: "192.168.56.110",
+      libvirt__network_name: "iot56",
+      libvirt__netmask: "255.255.255.0"
 
     srv.vm.provider :libvirt do |v|
       v.cpus   = 1
-      v.memory = 512
-      # optional nic model tweak if needed:
-      # v.nic_model_type = "virtio"
+      v.memory = 1024 # 512 can work, 1024 is safer for k3s [file:1]
     end
 
-    # K3s server provision script
     srv.vm.provision "shell",
       path: "scripts/k3s_server.sh",
       env: {
         "SERVER_IP"     => "192.168.56.110",
-        "CLUSTER_TOKEN" => cluster_token
+        "CLUSTER_TOKEN" => CLUSTER_TOKEN
       }
   end
 
-  # -------- K3s WORKER (agent) --------
+  # ---- WORKER (agent) ----
   config.vm.define "alrahmouSW" do |wrk|
-    wrk.vm.hostname = "alrahmouSW"
-    wrk.vm.network "private_network", ip: "192.168.56.111"
+    wrk.vm.hostname = "alrahmouSW" # login + "SW" [file:1]
+
+    wrk.vm.network "private_network",
+      ip: "192.168.56.111",
+      libvirt__network_name: "iot56",
+      libvirt__netmask: "255.255.255.0"
 
     wrk.vm.provider :libvirt do |v|
       v.cpus   = 1
-      v.memory = 512
-      # v.nic_model_type = "virtio"
+      v.memory = 1024
     end
 
-    # K3s worker provision script
     wrk.vm.provision "shell",
       path: "scripts/k3s_worker.sh",
       env: {
         "SERVER_IP"     => "192.168.56.110",
         "WORKER_IP"     => "192.168.56.111",
-        "CLUSTER_TOKEN" => cluster_token
+        "CLUSTER_TOKEN" => CLUSTER_TOKEN
       }
   end
 end
