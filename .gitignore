@@ -17,3 +17,4 @@ kubeconfig*
 **/kubeconfig*
 *.kubeconfig
 .argocd/
+p3/kubectl
