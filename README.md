@@ -322,45 +322,268 @@ Create a project with manifests (like `p3/k8s/dev`) and configure Argo CD to pul
 
 ---
 
-## 🧪 Validation Cheat Sheet
+## 🧪 Validation & Defense Checks
 
-**Part 1:**
+### Part 1 - Comprehensive Validation
+
+Run the defense script or manually verify:
+
+```bash
+cd p1
+bash defense_p1.sh
+```
+
+**Required Checks:**
+
+1. **VM Status:**
+   ```bash
+   vagrant status
+   # Both VMs should be "running"
+   ```
+
+2. **Hostnames:**
+   ```bash
+   vagrant ssh alrahmouS -c "hostname"
+   # Expected: alrahmouS
+   
+   vagrant ssh alrahmouSW -c "hostname"
+   # Expected: alrahmouSW
+   ```
+
+3. **Network Configuration:**
+   ```bash
+   vagrant ssh alrahmouS -c "ip -4 a show eth1 || ip -4 a"
+   # Should show IP: 192.168.56.110
+   
+   vagrant ssh alrahmouSW -c "ip -4 a show eth1 || ip -4 a"
+   # Should show IP: 192.168.56.111
+   ```
+
+4. **K3s Services:**
+   ```bash
+   vagrant ssh alrahmouS -c "sudo systemctl is-active k3s && sudo systemctl is-enabled k3s"
+   # Expected: active enabled
+   
+   vagrant ssh alrahmouSW -c "sudo systemctl is-active k3s-agent && sudo systemctl is-enabled k3s-agent"
+   # Expected: active enabled
+   ```
+
+5. **Cluster Nodes:**
+   ```bash
+   vagrant ssh alrahmouS -c "sudo kubectl get nodes -o wide"
+   # Expected:
+   # - 2 nodes: alrahmous (control-plane) and alrahmousw (worker)
+   # - Both STATUS: Ready
+   # - Correct INTERNAL-IP: 192.168.56.110 and 192.168.56.111
+   ```
+
+**Quick Validation:**
 ```bash
 cd p1
 vagrant up
 vagrant ssh alrahmouS -c "kubectl get nodes -o wide"
-# Expected: 2 nodes (alrahmous, alrahmousw) with IPs 192.168.56.110/111
 ```
 
-**Part 2:**
+---
+
+### Part 2 - Comprehensive Validation
+
+Run the defense script or manually verify:
+
+```bash
+cd p2
+bash defense_p2.sh
+```
+
+**Required Checks:**
+
+1. **VM Status:**
+   ```bash
+   vagrant status
+   # VM should be "running"
+   ```
+
+2. **Cluster Status:**
+   ```bash
+   vagrant ssh alrahmouS -c "sudo kubectl get nodes -o wide"
+   # Should show 1 node: alrahmous (Ready)
+   ```
+
+3. **Traefik Ingress Controller:**
+   ```bash
+   vagrant ssh alrahmouS -c "sudo kubectl -n kube-system get deploy,svc traefik -o wide"
+   # Expected: Traefik deployment and service running
+   ```
+
+4. **Webapps Deployments & Pods:**
+   ```bash
+   vagrant ssh alrahmouS -c "sudo kubectl -n webapps get deploy,pods -o wide"
+   # Expected:
+   # - 3 deployments: app1-deployment (1/1), app2-deployment (3/3), app3-deployment (1/1)
+   # - 5 pods total: 1 app1 + 3 app2 + 1 app3
+   # - All pods STATUS: Running
+   ```
+
+5. **Ingress Configuration:**
+   ```bash
+   vagrant ssh alrahmouS -c "sudo kubectl -n webapps get ingress -o wide"
+   # Expected:
+   # - ingress: webapps-ingress
+   # - HOSTS: app1.com, app2.com
+   # - ADDRESS: 192.168.56.110
+   ```
+
+6. **Ingress Functionality Tests (from host):**
+   ```bash
+   curl -s -H "Host: app1.com" http://192.168.56.110
+   # Expected: app1
+   
+   curl -s -H "Host: app2.com" http://192.168.56.110
+   # Expected: app2
+   
+   curl -s http://192.168.56.110
+   # Expected: app3 (default backend)
+   ```
+
+**Quick Validation:**
 ```bash
 cd p2
 vagrant up
 vagrant ssh alrahmouS -c "kubectl get all -n webapps"
-# Expected: 3 deployments, 3 services, 5 pods
-
-# Test ingress (from host)
 curl -H "Host: app1.com" 192.168.56.110      # app1
 curl -H "Host: app2.com" 192.168.56.110      # app2
 curl -H "Host: whatever.com" 192.168.56.110  # app3
 ```
 
-**Part 3:**
+---
+
+### Part 3 - Comprehensive Validation
+
+**Required Checks:**
+
+1. **K3d Cluster:**
+   ```bash
+   k3d cluster list
+   # Should show: iot-p3 cluster
+   
+   kubectl cluster-info
+   # Should show cluster is accessible
+   ```
+
+2. **Namespaces:**
+   ```bash
+   kubectl get ns
+   # Required: argocd, dev
+   ```
+
+3. **Argo CD Installation:**
+   ```bash
+   kubectl get pods -n argocd
+   # Expected: 7 pods all Running
+   # - argocd-application-controller-0
+   # - argocd-repo-server-*
+   # - argocd-server-*
+   # - argocd-redis-*
+   # - argocd-dex-server-*
+   # - argocd-applicationset-controller-*
+   # - argocd-notifications-controller-*
+   ```
+
+4. **Argo CD Application Status:**
+   ```bash
+   kubectl get application -n argocd
+   # Expected:
+   # - NAME: dev-app
+   # - SYNC STATUS: Synced
+   # - HEALTH STATUS: Healthy
+   
+   kubectl get application dev-app -n argocd -o yaml | grep -A 10 "status:"
+   # Should show sync and health details
+   ```
+
+5. **Deployed Application:**
+   ```bash
+   kubectl get all -n dev
+   # Expected:
+   # - deployment: wil-playground (1/1 Ready)
+   # - service: wil-playground (ClusterIP, port 8888)
+   # - pod: wil-playground-* (Running)
+   
+   kubectl get deployment wil-playground -n dev -o jsonpath='{.spec.template.spec.containers[0].image}'
+   # Should show: wil42/playground:v1 (or v2 if updated)
+   ```
+
+6. **GitOps Workflow Verification:**
+   ```bash
+   # Check that Argo CD is pointing to correct repo
+   kubectl get application dev-app -n argocd -o jsonpath='{.spec.source.repoURL}'
+   # Should show: https://github.com/usrali2026/Inception_of_Things.git
+   
+   kubectl get application dev-app -n argocd -o jsonpath='{.spec.source.path}'
+   # Should show: p3/dev-app
+   
+   kubectl get application dev-app -n argocd -o jsonpath='{.spec.syncPolicy.automated}'
+   # Should show: map[prune:true selfHeal:true]
+   ```
+
+**Quick Validation:**
 ```bash
 cd p3
 bash scripts/install_k3d_argocd.sh
-kubectl get ns                                    # Should show argocd, dev
+kubectl get ns                                    # argocd, dev
 kubectl get pods -n argocd                        # 7 pods Running
 kubectl get application -n argocd                 # dev-app Synced Healthy
 kubectl get pods -n dev                           # wil-playground Running
 ```
 
-**Bonus:**
+---
+
+### Bonus - GitLab Integration
+
 ```bash
 bonus/scripts/deploy_gitlab.sh
 kubectl get pods -n gitlab
 # Access GitLab at http://localhost:8080
 ```
+
+---
+
+## 📋 Evaluation Checklist
+
+Use this checklist to ensure all requirements are met:
+
+### Part 1 Requirements ✓
+- [ ] 2 VMs created: Server (alrahmouS) and Worker (alrahmouSW)
+- [ ] Correct hostnames: alrahmouS and alrahmouSW
+- [ ] Correct IPs: 192.168.56.110 (server) and 192.168.56.111 (worker)
+- [ ] K3s server service active and enabled on server VM
+- [ ] K3s agent service active and enabled on worker VM
+- [ ] 2 nodes visible in cluster: alrahmous (control-plane) and alrahmousw (worker)
+- [ ] Both nodes STATUS: Ready
+- [ ] Nodes have correct INTERNAL-IP addresses
+
+### Part 2 Requirements ✓
+- [ ] 1 VM with K3s installed
+- [ ] Traefik ingress controller running in kube-system namespace
+- [ ] webapps namespace created
+- [ ] 3 deployments: app1 (1 replica), app2 (3 replicas), app3 (1 replica)
+- [ ] 3 services: app1-service, app2-service, app3-service
+- [ ] 5 pods total (1 app1 + 3 app2 + 1 app3), all Running
+- [ ] Ingress configured with hosts: app1.com, app2.com
+- [ ] Ingress accessible at 192.168.56.110
+- [ ] Host-based routing works: app1.com → app1, app2.com → app2, default → app3
+
+### Part 3 Requirements ✓
+- [ ] K3d cluster created (iot-p3)
+- [ ] argocd namespace created
+- [ ] dev namespace created
+- [ ] Argo CD installed (7 pods running)
+- [ ] Argo CD Application created (dev-app)
+- [ ] Application synced and healthy
+- [ ] App deployed in dev namespace (wil-playground)
+- [ ] GitOps workflow: Application points to GitHub repo
+- [ ] Auto-sync enabled with prune and selfHeal
+- [ ] Version switch demo works (v1 → v2 → v1)
 
 ---
 
