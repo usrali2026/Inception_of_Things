@@ -1,17 +1,26 @@
-# GitLab configuration optimized for local development
 global:
   hosts:
     domain: localhost
     https: false
-  
+    gitlab:
+      name: localhost              # added: explicit host for correct URL generation
+      https: false
+    registry:
+      https: false
+
   edition: ce
-  
+
+  kas:
+    enabled: false                 # added: disables KAS agent server (saves ~200MB RAM)
+
   ingress:
     enabled: false
     configureCertmanager: false
-  
+    tls:
+      enabled: false               # added: no TLS for local dev
+
   time_zone: UTC
-  
+
   appConfig:
     enableUsagePing: false
     enableSeatLink: false
@@ -19,6 +28,9 @@ global:
 
 certmanager-issuer:
   email: admin@localhost
+
+certmanager:
+  install: false                   # added: prevents cert-manager CRD conflicts
 
 nginx-ingress:
   enabled: false
@@ -29,27 +41,23 @@ prometheus:
 gitlab-runner:
   install: false
 
-# PostgreSQL 16 - required for GitLab 18+
+registry:
+  enabled: false                   # changed: Docker Hub is used instead, saves ~300MB RAM
+
 postgresql:
   image:
-    tag: 16.3.0
+    tag: 16.3.0                    # required for GitLab 18+
   metrics:
     enabled: false
   persistence:
-    size: 8Gi
+    size: 4Gi                      # reduced from 8Gi, enough for local dev
 
 redis:
   metrics:
     enabled: false
   master:
     persistence:
-      size: 5Gi
-
-registry:
-  enabled: true
-  hpa:
-    minReplicas: 1
-    maxReplicas: 1
+      size: 2Gi                    # reduced from 5Gi, Redis needs very little
 
 gitlab-shell:
   minReplicas: 1
@@ -66,5 +74,8 @@ sidekiq:
 gitaly:
   persistence:
     enabled: true
-    size: 10Gi
+    size: 5Gi                      # reduced from 10Gi
 
+minio:
+  persistence:
+    size: 5Gi

@@ -1,0 +1,13 @@
+bonus/
+├── Complete Bonus Implementation Scripts and Configs.md
+├── confs/
+│   ├── argocd-app-gitlab.yaml      # dev-app name, internal GitLab DNS repoURL
+│   ├── gitlab-values.yaml          # optimized, KAS disabled, no registry, no certmanager
+│   ├── gitlab-default-values.yaml  # reference only — document in MD file
+│   ├── deployment.yaml             # alrahmou/playground:v1 → change to :v2 for demo
+│   └── service.yaml                # ClusterIP on port 8888
+└── scripts/
+    ├── setup.sh                    # full automated setup + argocd repo add
+    ├── deploy_gitlab.sh            # Helm install/upgrade GitLab
+    └── cleanup_gitlab.sh           # full reset for defense retry
+
