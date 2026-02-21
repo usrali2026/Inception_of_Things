@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: "https://github.com/usrali2026/Inception_of_Things.git"
+    repoURL: "https://github.com/usrali2026/Inception_of_Things_alrahmou.git"
     targetRevision: main
     path: p3/dev-app
   destination:
