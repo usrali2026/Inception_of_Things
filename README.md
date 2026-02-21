@@ -1,673 +1,558 @@
-# Inception-of-Things (IoT) – Modern README
+# Inception-of-Things (IoT)
 
-> Hands-on Kubernetes project for 42, using **K3s**, **K3d**, **Vagrant**, **Argo CD**, and optionally **GitLab**. Implements the official subject v4.0. All code and configs are organized for fast setup and validation.
+> Hands-on Kubernetes project for 42, using **K3s**, **K3d**, **Vagrant**,
+> **Argo CD**, and optionally **GitLab**. Implements the official subject v4.0.
+> Login: **alrahmou**
 
 ---
 
 ## 🚀 Project Structure
 
-| Folder | Technology         | Purpose                                              |
-|--------|--------------------|-----------------------------------------------------|
-| p1     | Vagrant + K3s      | 2-node K3s cluster (Server + ServerWorker VMs)      |
-| p2     | Vagrant + K3s      | 1 K3s VM, 3 web apps, Ingress (host-based routing)  |
-| p3     | K3d + Argo CD      | GitOps: app in `dev` namespace, auto-updated via Git |
-| bonus  | GitLab + Helm      | Local GitLab, Argo CD pulling from GitLab repo      |
+| Folder | Technology       | Purpose                                               |
+|--------|------------------|-------------------------------------------------------|
+| p1     | Vagrant + K3s    | 2-node K3s cluster (Server + ServerWorker VMs)        |
+| p2     | Vagrant + K3s    | 1 K3s VM, 3 web apps, Traefik Ingress routing         |
+| p3     | K3d + Argo CD    | GitOps: app in `dev` namespace, auto-synced via GitHub|
+| bonus  | GitLab + Helm    | Self-hosted GitLab in K3d, Argo CD pulls from it      |
 
-All config is under `p1/`, `p2/`, `p3/`, and optional `bonus/` at repo root.
+All config lives under `p1/`, `p2/`, `p3/`, and optional `bonus/` at repo root.
 
 ---
 
 ## 🛠️ Prerequisites
 
-- Ubuntu 22.04+ host VM (recommended) or Ubuntu 24.04
-- Vagrant (VirtualBox or libvirt) - **libvirt recommended**
+**Host resources:** ≥ 8 GB RAM, 4 vCPUs, 50 GB disk
+
+- Ubuntu 22.04+ or 24.04 host VM
+- Vagrant + vagrant-libvirt plugin (**libvirt recommended**)
 - Docker
 - kubectl
 - Git
-- libvirt and libvirt-dev (for vagrant-libvirt plugin)
-
-**Host resources:** ≥8 GB RAM, 4 vCPUs, 50 GB disk
+- libvirt + libvirt-dev
 
 **Installation:**
 
-1. **Install Vagrant:**
-   ```bash
-   # Add HashiCorp repository
-   curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-   echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-   sudo apt update && sudo apt install vagrant -y
-   ```
+```bash
+# 1. Install Vagrant
+curl -fsSL https://apt.releases.hashicorp.com/gpg \
+  | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+  https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+  | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update && sudo apt install vagrant -y
 
-2. **Install vagrant-libvirt plugin:**
-   ```bash
-   sudo apt install libvirt-dev -y
-   vagrant plugin install vagrant-libvirt
-   ```
+# 2. Install vagrant-libvirt plugin
+sudo apt install libvirt-dev -y
+vagrant plugin install vagrant-libvirt
 
-3. **Install Docker, kubectl, k3d (for Part 3):**
-   ```bash
-   sudo apt install docker.io -y
-   sudo systemctl enable --now docker
-   # kubectl and k3d will be installed by p3/scripts/install_k3d_argocd.sh
-   ```
+# 3. Install Docker
+sudo apt install docker.io -y
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER   # logout + login after this
 
-Quick check:
+# kubectl and k3d are auto-installed by p3/scripts/install_k3d_argocd.sh
+```
+
+**Quick check:**
+
 ```bash
 vagrant --version
 docker --version
-kubectl version --client
 git --version
-virsh --version  # For libvirt
+virsh --version
 ```
 
-**Note:** If you see `[fog][WARNING] Unrecognized arguments: libvirt_ip_command` warnings, these are harmless and can be ignored. Alternatively, you can suppress them using the wrapper script in `p1/vagrant-wrapper.sh` or by adding a function to your `~/.zshrc` (see troubleshooting section).
+> **Note:** `[fog][WARNING] Unrecognized arguments: libvirt_ip_command` warnings
+> are harmless — ignore them or suppress with the wrapper in `p1/vagrant-wrapper.sh`.
 
 ---
 
-## 1️⃣ Part 1 – K3s & Vagrant (`p1`)
+## ⚠️ Pre-flight (Run Before Any `vagrant up`)
 
-Spin up two VMs (Server, ServerWorker) with K3s using Vagrant.
+```bash
+# Confirm iot56 libvirt network is active — required for P1 and P2
+virsh net-list --all
+# Must show:
+# iot56   active   yes
+
+# If inactive:
+virsh net-start iot56
+```
+
+
+---
+
+## 1️⃣ Part 1 – K3s \& Vagrant (`p1`)
+
+Spin up two VMs (Server + ServerWorker) with K3s using Vagrant.
 
 **Folder:**
+
 ```
 p1/
-  Vagrantfile              # Defines 2 VMs: alrahmouS (server) and alrahmouSW (worker)
+  Vagrantfile              # 2 VMs: alrahmouS (server) + alrahmouSW (worker)
   scripts/
-    k3s_server.sh          # Installs and configures K3s server
-    k3s_worker.sh          # Joins worker node to K3s cluster
-  confs/                   # Configuration files
-  vagrant-wrapper.sh       # Optional wrapper to suppress fog warnings
+    k3s_server.sh          # Installs K3s server mode, enables + starts k3s
+    k3s_worker.sh          # Waits for server API, joins as agent, enables k3s-agent
+  confs/                   # Empty — no config files required for P1
 ```
 
 **Setup:**
+
 ```bash
+# Run from repo root
 cd p1
 vagrant up
 ```
 
 This will:
-- Create 2 VMs: `alrahmouS` (192.168.56.110) and `alrahmouSW` (192.168.56.111)
-- Install K3s server on `alrahmouS`
-- Join `alrahmouSW` as a worker node
-- Configure networking on the `iot56` libvirt network
 
-**Validation:**
+- Create `alrahmouS` at `192.168.56.110` → K3s **server (controller)** mode
+- Create `alrahmouSW` at `192.168.56.111` → K3s **agent (worker)** mode
+- Worker waits for server API to be ready before joining
+- Both services explicitly enabled (active + enabled)
+
+**Validation (inside VMs):**
+
 ```bash
-vagrant ssh alrahmouS -c "kubectl get nodes -o wide"
-```
+# Connect to server
+vagrant ssh alrahmouS
 
-Expected output:
-- 2 nodes: `alrahmous` (control-plane) and `alrahmousw` (worker)
-- Both with STATUS: Ready
-- Correct IPs: 192.168.56.110 and 192.168.56.111
+  hostname                                         # → alrahmouS
+  ip a | grep 192.168.56.110                       # → correct IP
+  sudo systemctl is-active k3s                     # → active
+  sudo systemctl is-enabled k3s                    # → enabled
+  kubectl get nodes -o wide
+  # → alrahmouS    Ready   control-plane   192.168.56.110
+  # → alrahmouSW   Ready   <none>          192.168.56.111
+
+# Connect to worker (separate terminal)
+vagrant ssh alrahmouSW
+
+  hostname                                         # → alrahmouSW
+  ip a | grep 192.168.56.111                       # → correct IP
+  sudo systemctl is-active k3s-agent               # → active
+  sudo systemctl is-enabled k3s-agent              # → enabled
+```
 
 **Useful commands:**
+
 ```bash
-vagrant status              # Check VM status
-vagrant ssh alrahmouS       # SSH into server VM
-vagrant ssh alrahmouSW      # SSH into worker VM
-vagrant halt                # Stop all VMs
-vagrant destroy             # Delete all VMs
+vagrant status                  # Check VM status
+vagrant halt                    # Stop all VMs
+vagrant destroy -f              # Delete all VMs
+vagrant reload --provision      # Re-provision if something broke
 ```
+
 
 ---
 
 ## 2️⃣ Part 2 – K3s + 3 Apps + Ingress (`p2`)
 
-Single VM with K3s, three web apps, and Ingress routing by Host header.
+Single VM with K3s, three web apps, and Traefik Ingress routing by Host header.
 
 **Folder:**
+
 ```
 p2/
-  Vagrantfile
+  Vagrantfile                  # 1 VM: alrahmouS (192.168.56.110)
   scripts/
-    install_k3s.sh          # Installs K3s and deploys apps
+    install_k3s.sh             # Installs K3s, waits for Traefik, deploys apps
   confs/
-    apps-ingress.yaml       # Combined: Deployments + Services + Ingress
-                            # - app1: 1 replica
-                            # - app2: 3 replicas  
-                            # - app3: 1 replica (default backend)
+    apps-ingress.yaml          # Namespace + 3 Deployments + 3 Services + Ingress
+                               #   app1: 1 replica  → Host: app1.com
+                               #   app2: 3 replicas → Host: app2.com
+                               #   app3: 1 replica  → default backend (no Host)
 ```
 
 **Setup:**
+
 ```bash
+# Run from repo root
 cd p2
 vagrant up
 ```
 
 This will:
-- Create 1 VM: `alrahmouS` (192.168.56.110)
-- Install K3s server
+
+- Create `alrahmouS` at `192.168.56.110` → K3s server mode
 - Create `webapps` namespace
-- Deploy 3 applications (app1, app2, app3)
-- Configure Ingress with host-based routing
+- Deploy 3 apps (5 pods total: 1+3+1)
+- Configure Traefik Ingress with host-based routing
 
-**Validation:**
+**Validation (inside VM):**
+
 ```bash
-# Check all resources
-vagrant ssh alrahmouS -c "kubectl get all -n webapps"
+vagrant ssh alrahmouS
 
-# Check ingress
-vagrant ssh alrahmouS -c "kubectl get ingress -n webapps"
+  hostname                                         # → alrahmouS
+  ip a | grep 192.168.56.110                       # → correct IP
+  sudo systemctl is-active k3s                     # → active
+  sudo systemctl is-enabled k3s                    # → enabled
+
+  kubectl get nodes -o wide
+  # → alrahmouS   Ready   192.168.56.110
+
+  kubectl get all -n webapps
+  # → app1-deployment 1/1, app2-deployment 3/3, app3-deployment 1/1
+  # → app1-service, app2-service, app3-service
+  # → 5 pods total, all Running
+
+  kubectl -n kube-system get deploy,svc traefik    # → Traefik running
+
+  kubectl -n webapps get ingress
+  # → webapps-ingress   traefik   app1.com,app2.com
 ```
 
-Expected output:
-- 3 deployments: app1-deployment (1/1), app2-deployment (3/3), app3-deployment (1/1)
-- 3 services: app1-service, app2-service, app3-service
-- 5 pods total (1 app1 + 3 app2 + 1 app3)
-- 1 ingress: webapps-ingress with hosts app1.com, app2.com
+**Ingress demo (from host machine — memorize these, evaluator won't give them):**
 
-**Ingress Testing:**
-From your host machine (not inside the VM):
 ```bash
-curl -H "Host: app1.com" 192.168.56.110      # Returns: app1
-curl -H "Host: app2.com" 192.168.56.110      # Returns: app2
-curl -H "Host: whatever.com" 192.168.56.110  # Returns: app3 (default backend)
+curl -H 'Host: app1.com' http://192.168.56.110    # → app1
+curl -H 'Host: app2.com' http://192.168.56.110    # → app2
+curl http://192.168.56.110                         # → app3 (default backend)
 ```
 
-**Architecture:**
-- Traefik (K3s default ingress controller) handles routing
-- Host-based routing: different Host headers route to different services
-- app3 serves as the default backend for unmatched hosts
 
 ---
 
 ## 3️⃣ Part 3 – K3d + Argo CD (`p3`)
 
-K3d cluster with Argo CD, deploying an app to the `dev` namespace from this GitHub repo. Demonstrates GitOps workflow with automatic synchronization.
+K3d cluster with Argo CD, deploying an app to the `dev` namespace from GitHub.
+Demonstrates a full GitOps workflow with automatic synchronization.
 
 **Folder:**
+
 ```
 p3/
   scripts/
-    install_k3d_argocd.sh  # Single script: installs tools, creates cluster, deploys Argo CD
+    install_k3d_argocd.sh    # Installs tools, creates cluster, deploys ArgoCD,
+                             # applies Application manifest, auto-starts UI port-forward
   confs/
-    argocd-app.yaml        # Argo CD Application manifest
-                          # - Points to GitHub repo: https://github.com/usrali2026/Inception_of_Things.git
-                          # - Path: p3/dev-app
-                          # - Auto-sync enabled with prune and selfHeal
+    argocd-app.yaml          # Argo CD Application:
+                             #   repoURL: https://github.com/usrali2026/Inception_of_Things.git
+                             #   path: p3/dev-app
+                             #   namespace: dev
+                             #   automated: prune=true, selfHeal=true
   dev-app/
-    deployment.yaml        # App deployment (wil-playground image: v1/v2)
-    service.yaml          # Service exposing app on port 8888
+    deployment.yaml          # image: wil42/playground:v1 (change to :v2 for demo)
+    service.yaml             # ClusterIP on port 8888
 ```
 
 **Setup:**
+
 ```bash
-cd p3
-bash scripts/install_k3d_argocd.sh
+# Run from repo root (not from inside p3/)
+bash p3/scripts/install_k3d_argocd.sh
 ```
 
 This script will:
-1. Install Docker, kubectl, and k3d (if not already installed)
-2. Create k3d cluster named `iot-p3` (1 server + 1 agent)
+
+1. Install Docker (+ add user to docker group), kubectl, k3d, ArgoCD CLI
+2. Create K3d cluster `iot-p3` (1 server + 1 agent)
 3. Create namespaces: `argocd` and `dev`
-4. Install Argo CD in the `argocd` namespace
-5. Apply Argo CD Application manifest pointing to this GitHub repo
-6. Argo CD automatically syncs and deploys the app from `p3/dev-app/`
+4. Install Argo CD, wait for **all 7 pods** to be ready
+5. Apply `p3/confs/argocd-app.yaml`
+6. Auto-start ArgoCD UI port-forward on `https://localhost:8080`
+7. Print admin credentials
 
 **Validation:**
+
 ```bash
-# Check namespaces
+# Namespaces
 kubectl get ns
-# Should show: argocd, dev
+# → argocd   Active
+# → dev      Active
 
-# Check Argo CD pods (all should be Running)
+# All 7 ArgoCD pods Running
 kubectl get pods -n argocd
-# Expected: 7 pods (application-controller, repo-server, server, redis, dex-server, etc.)
 
-# Check Argo CD Application status
+# Application status
 kubectl get application -n argocd
-# Should show: dev-app, Synced, Healthy
+# → dev-app   Synced   Healthy
 
-# Check deployed app
+# App pod in dev
 kubectl get pods -n dev
-# Should show: wil-playground pod Running
+# → wil-playground-xxxx   1/1   Running
 
-# Check all resources in dev namespace
-kubectl get all -n dev
-# Should show: deployment, service, pod
+# Confirm v1 image
+kubectl get deployment -n dev \
+  -o jsonpath='{.items.spec.template.spec.containers.image}'
+# → wil42/playground:v1
+
+# ArgoCD UI
+# → https://localhost:8080  |  admin / <password from script output>
 ```
 
-**GitOps Workflow - Version Switch Demo:**
+**GitOps v1 → v2 demo:**
 
-1. **Update the image version:**
-   ```bash
-   # Edit p3/dev-app/deployment.yaml
-   # Change: image: wil42/playground:v1 → image: wil42/playground:v2
-   ```
-
-2. **Commit and push:**
-   ```bash
-   git add p3/dev-app/deployment.yaml
-   git commit -m "Update image to v2"
-   git push origin main
-   ```
-
-3. **Argo CD automatically syncs:**
-   - Argo CD detects the change in GitHub (auto-sync enabled)
-   - Updates the deployment
-   - Kubernetes performs a rolling update
-   - New pod with v2 image is created
-   - Old pod with v1 image is terminated
-
-4. **Verify the update:**
-   ```bash
-   # Check deployment image
-   kubectl get deployment wil-playground -n dev -o jsonpath='{.spec.template.spec.containers[0].image}'
-   # Should show: wil42/playground:v2
-   
-   # Check pod image
-   kubectl get pod -n dev -l app=wil-playground -o jsonpath='{.items[0].spec.containers[0].image}'
-   # Should show: wil42/playground:v2
-   
-   # Check Argo CD sync status
-   kubectl get application dev-app -n argocd
-   # Should show: Synced, Healthy
-   ```
-
-**Manual Sync (if needed):**
 ```bash
-# Trigger manual refresh
-kubectl annotate application dev-app -n argocd argocd.argoproj.io/refresh=hard --overwrite
+# Terminal 1 — watch rolling update in real time
+watch kubectl get pods -n dev
 
-# Or sync manually via Argo CD CLI (if installed)
+# Terminal 2 — perform the update
+sed -i 's/wil42\/playground:v1/wil42\/playground:v2/' p3/dev-app/deployment.yaml
+git add p3/dev-app/deployment.yaml
+git commit -m "upgrade to v2"
+git push
+
+# If auto-sync doesn't trigger in ~30s:
 argocd app sync dev-app
+
+# Verify
+kubectl get application dev-app -n argocd           # → Synced   Healthy
+kubectl get deployment -n dev \
+  -o jsonpath='{.items.spec.template.spec.containers.image}'
+# → wil42/playground:v2
+kubectl get pod -n dev \
+  -o jsonpath='{.items.spec.containers.image}'
+# → wil42/playground:v2
+
+# Rollback (optional — do it, it's impressive)
+sed -i 's/wil42\/playground:v2/wil42\/playground:v1/' p3/dev-app/deployment.yaml
+git add p3/dev-app/deployment.yaml && git commit -m "rollback to v1" && git push
 ```
 
-**Access Argo CD UI:**
+**Manual ArgoCD UI access (if port-forward died):**
+
 ```bash
-# Port-forward Argo CD server
-kubectl -n argocd port-forward svc/argocd-server 8080:443
-
-# Get initial admin password
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
-
-# Access UI at: https://localhost:8080
-# Username: admin
-# Password: (from command above)
+kubectl -n argocd port-forward svc/argocd-server 8080:443 &
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d
 ```
 
 **Cleanup:**
-```bash
-# Delete k3d cluster
-k3d cluster delete iot-p3
 
-# Or delete everything
-kubectl delete application dev-app -n argocd
+```bash
 k3d cluster delete iot-p3
 ```
+
 
 ---
 
 ## ⭐ Bonus – GitLab Integration (`bonus`)
 
-Local GitLab deployed in `gitlab` namespace via Helm, used as a Git source for Argo CD instead of GitHub.
+Self-hosted GitLab deployed inside K3d in the `gitlab` namespace via Helm.
+Argo CD pulls from local GitLab instead of GitHub — fully self-contained pipeline.
 
 **Folder:**
+
 ```
 bonus/
+  Complete Bonus Implementation Scripts and Configs.md
   confs/
-    gitlab-namespace.yaml
+    argocd-app-gitlab.yaml    # Argo CD Application pointing to local GitLab
+                              #   repoURL: http://gitlab-webservice-default.gitlab.svc.cluster.local:8181/root/iot-app.git
+                              #   name: dev-app
+    gitlab-values.yaml        # Helm values: GitLab CE, no certmanager/KAS/registry/runner
+    gitlab-default-values.yaml # Reference only — not used in deployment
+    deployment.yaml           # image: alrahmou/playground:v1 → change to :v2 for demo
+    service.yaml              # ClusterIP on port 8888
   scripts/
-    deploy_gitlab.sh
+    setup.sh                  # Full automated setup: K3d + ArgoCD + GitLab + repo registration
+    deploy_gitlab.sh          # Helm install/upgrade GitLab, port-forward to localhost:8080
+    cleanup_gitlab.sh         # Full reset: kills port-forwards, uninstalls GitLab, deletes cluster
 ```
-**Usage:**
-```bash
-bonus/scripts/deploy_gitlab.sh
-kubectl get ns
-kubectl get pods -n gitlab
-```
-GitLab UI: http://localhost:8080
-Create a project with manifests (like `p3/k8s/dev`) and configure Argo CD to pull from GitLab. Demo v1→v2 image tag change and Argo CD sync.
 
----
-
-## 🧪 Validation & Defense Checks
-
-### Part 1 - Comprehensive Validation
-
-Run the defense script or manually verify:
+**Setup:**
 
 ```bash
-cd p1
-bash defense_p1.sh
+# Run from repo root — takes 10-15 minutes
+bash bonus/scripts/setup.sh
 ```
 
-**Required Checks:**
+This script will:
 
-1. **VM Status:**
-   ```bash
-   vagrant status
-   # Both VMs should be "running"
-   ```
+1. Install Docker, kubectl, k3d, Helm, ArgoCD CLI
+2. Create K3d cluster `iot-bonus` (port **9080** for loadbalancer, **not 8080**)
+3. Create namespaces: `argocd`, `dev`, `gitlab`
+4. Install Argo CD, wait for all 7 pods
+5. Deploy GitLab via Helm with minimal CE config
+6. Wait for GitLab webservice pod to be ready
+7. Port-forward GitLab to `http://localhost:8080`
+8. Register local GitLab repo in Argo CD (internal cluster DNS)
+9. Print credentials for both GitLab and Argo CD
 
-2. **Hostnames:**
-   ```bash
-   vagrant ssh alrahmouS -c "hostname"
-   # Expected: alrahmouS
-   
-   vagrant ssh alrahmouSW -c "hostname"
-   # Expected: alrahmouSW
-   ```
-
-3. **Network Configuration:**
-   ```bash
-   vagrant ssh alrahmouS -c "ip -4 a show eth1 || ip -4 a"
-   # Should show IP: 192.168.56.110
-   
-   vagrant ssh alrahmouSW -c "ip -4 a show eth1 || ip -4 a"
-   # Should show IP: 192.168.56.111
-   ```
-
-4. **K3s Services:**
-   ```bash
-   vagrant ssh alrahmouS -c "sudo systemctl is-active k3s && sudo systemctl is-enabled k3s"
-   # Expected: active enabled
-   
-   vagrant ssh alrahmouSW -c "sudo systemctl is-active k3s-agent && sudo systemctl is-enabled k3s-agent"
-   # Expected: active enabled
-   ```
-
-5. **Cluster Nodes:**
-   ```bash
-   vagrant ssh alrahmouS -c "sudo kubectl get nodes -o wide"
-   # Expected:
-   # - 2 nodes: alrahmous (control-plane) and alrahmousw (worker)
-   # - Both STATUS: Ready
-   # - Correct INTERNAL-IP: 192.168.56.110 and 192.168.56.111
-   ```
-
-**Quick Validation:**
-```bash
-cd p1
-vagrant up
-vagrant ssh alrahmouS -c "kubectl get nodes -o wide"
-```
-
----
-
-### Part 2 - Comprehensive Validation
-
-Run the defense script or manually verify:
+**After setup — manual steps (with evaluator):**
 
 ```bash
-cd p2
-bash defense_p2.sh
+# 1. Create GitLab project
+# → Open http://localhost:8080 | root / <password>
+# → New Project → iot-app → Public → Create
+
+# 2. Push app manifests to GitLab
+git clone http://localhost:8080/root/iot-app.git
+cd iot-app
+cp ../bonus/confs/deployment.yaml .
+cp ../bonus/confs/service.yaml .
+git add . && git commit -m "feat: add v1 deployment" && git push
+
+# 3. Apply Argo CD Application
+kubectl apply -f bonus/confs/argocd-app-gitlab.yaml
+
+# 4. Verify
+kubectl get application -n argocd           # → dev-app   Synced   Healthy
+kubectl get pods -n dev                      # → alrahmou-playground Running
 ```
 
-**Required Checks:**
-
-1. **VM Status:**
-   ```bash
-   vagrant status
-   # VM should be "running"
-   ```
-
-2. **Cluster Status:**
-   ```bash
-   vagrant ssh alrahmouS -c "sudo kubectl get nodes -o wide"
-   # Should show 1 node: alrahmous (Ready)
-   ```
-
-3. **Traefik Ingress Controller:**
-   ```bash
-   vagrant ssh alrahmouS -c "sudo kubectl -n kube-system get deploy,svc traefik -o wide"
-   # Expected: Traefik deployment and service running
-   ```
-
-4. **Webapps Deployments & Pods:**
-   ```bash
-   vagrant ssh alrahmouS -c "sudo kubectl -n webapps get deploy,pods -o wide"
-   # Expected:
-   # - 3 deployments: app1-deployment (1/1), app2-deployment (3/3), app3-deployment (1/1)
-   # - 5 pods total: 1 app1 + 3 app2 + 1 app3
-   # - All pods STATUS: Running
-   ```
-
-5. **Ingress Configuration:**
-   ```bash
-   vagrant ssh alrahmouS -c "sudo kubectl -n webapps get ingress -o wide"
-   # Expected:
-   # - ingress: webapps-ingress
-   # - HOSTS: app1.com, app2.com
-   # - ADDRESS: 192.168.56.110
-   ```
-
-6. **Ingress Functionality Tests (from host):**
-   ```bash
-   curl -s -H "Host: app1.com" http://192.168.56.110
-   # Expected: app1
-   
-   curl -s -H "Host: app2.com" http://192.168.56.110
-   # Expected: app2
-   
-   curl -s http://192.168.56.110
-   # Expected: app3 (default backend)
-   ```
-
-**Quick Validation:**
-```bash
-cd p2
-vagrant up
-vagrant ssh alrahmouS -c "kubectl get all -n webapps"
-curl -H "Host: app1.com" 192.168.56.110      # app1
-curl -H "Host: app2.com" 192.168.56.110      # app2
-curl -H "Host: whatever.com" 192.168.56.110  # app3
-```
-
----
-
-### Part 3 - Comprehensive Validation
-
-**Required Checks:**
-
-1. **K3d Cluster:**
-   ```bash
-   k3d cluster list
-   # Should show: iot-p3 cluster
-   
-   kubectl cluster-info
-   # Should show cluster is accessible
-   ```
-
-2. **Namespaces:**
-   ```bash
-   kubectl get ns
-   # Required: argocd, dev
-   ```
-
-3. **Argo CD Installation:**
-   ```bash
-   kubectl get pods -n argocd
-   # Expected: 7 pods all Running
-   # - argocd-application-controller-0
-   # - argocd-repo-server-*
-   # - argocd-server-*
-   # - argocd-redis-*
-   # - argocd-dex-server-*
-   # - argocd-applicationset-controller-*
-   # - argocd-notifications-controller-*
-   ```
-
-4. **Argo CD Application Status:**
-   ```bash
-   kubectl get application -n argocd
-   # Expected:
-   # - NAME: dev-app
-   # - SYNC STATUS: Synced
-   # - HEALTH STATUS: Healthy
-   
-   kubectl get application dev-app -n argocd -o yaml | grep -A 10 "status:"
-   # Should show sync and health details
-   ```
-
-5. **Deployed Application:**
-   ```bash
-   kubectl get all -n dev
-   # Expected:
-   # - deployment: wil-playground (1/1 Ready)
-   # - service: wil-playground (ClusterIP, port 8888)
-   # - pod: wil-playground-* (Running)
-   
-   kubectl get deployment wil-playground -n dev -o jsonpath='{.spec.template.spec.containers[0].image}'
-   # Should show: wil42/playground:v1 (or v2 if updated)
-   ```
-
-6. **GitOps Workflow Verification:**
-   ```bash
-   # Check that Argo CD is pointing to correct repo
-   kubectl get application dev-app -n argocd -o jsonpath='{.spec.source.repoURL}'
-   # Should show: https://github.com/usrali2026/Inception_of_Things.git
-   
-   kubectl get application dev-app -n argocd -o jsonpath='{.spec.source.path}'
-   # Should show: p3/dev-app
-   
-   kubectl get application dev-app -n argocd -o jsonpath='{.spec.syncPolicy.automated}'
-   # Should show: map[prune:true selfHeal:true]
-   ```
-
-**Quick Validation:**
-```bash
-cd p3
-bash scripts/install_k3d_argocd.sh
-kubectl get ns                                    # argocd, dev
-kubectl get pods -n argocd                        # 7 pods Running
-kubectl get application -n argocd                 # dev-app Synced Healthy
-kubectl get pods -n dev                           # wil-playground Running
-```
-
----
-
-### Bonus - GitLab Integration
+**GitOps v1 → v2 demo (from local GitLab):**
 
 ```bash
-bonus/scripts/deploy_gitlab.sh
-kubectl get pods -n gitlab
-# Access GitLab at http://localhost:8080
+cd iot-app
+sed -i 's/alrahmou\/playground:v1/alrahmou\/playground:v2/' deployment.yaml
+git add deployment.yaml && git commit -m "upgrade to v2" && git push
+
+argocd app sync dev-app   # if auto-sync doesn't trigger
+
+kubectl get deployment -n dev \
+  -o jsonpath='{.items.spec.template.spec.containers.image}'
+# → alrahmou/playground:v2
 ```
+
+**Verify repo is local GitLab (not GitHub):**
+
+```bash
+kubectl get application dev-app -n argocd -o yaml | grep repoURL
+# → repoURL: http://gitlab-webservice-default.gitlab.svc.cluster.local:8181/root/iot-app.git
+```
+
+**Cleanup:**
+
+```bash
+cd ..   # back to repo root
+bash bonus/scripts/cleanup_gitlab.sh
+```
+
 
 ---
 
 ## 📋 Evaluation Checklist
 
-Use this checklist to ensure all requirements are met:
+### Part 1
 
-### Part 1 Requirements ✓
-- [ ] 2 VMs created: Server (alrahmouS) and Worker (alrahmouSW)
-- [ ] Correct hostnames: alrahmouS and alrahmouSW
-- [ ] Correct IPs: 192.168.56.110 (server) and 192.168.56.111 (worker)
-- [ ] K3s server service active and enabled on server VM
-- [ ] K3s agent service active and enabled on worker VM
-- [ ] 2 nodes visible in cluster: alrahmous (control-plane) and alrahmousw (worker)
-- [ ] Both nodes STATUS: Ready
-- [ ] Nodes have correct INTERNAL-IP addresses
+- [ ] `p1/Vagrantfile` — 2 VMs: `alrahmouS` + `alrahmouSW`
+- [ ] IPs: `192.168.56.110` (server) and `192.168.56.111` (worker)
+- [ ] `k3s` service: **active** AND **enabled** on server
+- [ ] `k3s-agent` service: **active** AND **enabled** on worker
+- [ ] `kubectl get nodes -o wide` → both nodes `Ready`, correct IPs
+- [ ] `scripts/k3s_server.sh` + `scripts/k3s_worker.sh` present
 
-### Part 2 Requirements ✓
-- [ ] 1 VM with K3s installed
-- [ ] Traefik ingress controller running in kube-system namespace
-- [ ] webapps namespace created
-- [ ] 3 deployments: app1 (1 replica), app2 (3 replicas), app3 (1 replica)
-- [ ] 3 services: app1-service, app2-service, app3-service
-- [ ] 5 pods total (1 app1 + 3 app2 + 1 app3), all Running
-- [ ] Ingress configured with hosts: app1.com, app2.com
-- [ ] Ingress accessible at 192.168.56.110
-- [ ] Host-based routing works: app1.com → app1, app2.com → app2, default → app3
 
-### Part 3 Requirements ✓
-- [ ] K3d cluster created (iot-p3)
-- [ ] argocd namespace created
-- [ ] dev namespace created
-- [ ] Argo CD installed (7 pods running)
-- [ ] Argo CD Application created (dev-app)
-- [ ] Application synced and healthy
-- [ ] App deployed in dev namespace (wil-playground)
-- [ ] GitOps workflow: Application points to GitHub repo
-- [ ] Auto-sync enabled with prune and selfHeal
-- [ ] Version switch demo works (v1 → v2 → v1)
+### Part 2
+
+- [ ] `p2/Vagrantfile` — 1 VM: `alrahmouS` at `192.168.56.110`
+- [ ] `webapps` namespace created
+- [ ] 3 deployments: `app1-deployment` (1), `app2-deployment` (3), `app3-deployment` (1)
+- [ ] 3 services: `app1-service`, `app2-service`, `app3-service`
+- [ ] 5 pods total, all `Running`
+- [ ] Traefik running in `kube-system`
+- [ ] `webapps-ingress` with hosts `app1.com`, `app2.com`
+- [ ] `curl -H 'Host: app1.com' http://192.168.56.110` → app1
+- [ ] `curl -H 'Host: app2.com' http://192.168.56.110` → app2
+- [ ] `curl http://192.168.56.110` → app3 (default)
+
+
+### Part 3
+
+- [ ] K3d cluster `iot-p3` running
+- [ ] Namespaces: `argocd` and `dev`
+- [ ] 7 Argo CD pods all `Running`
+- [ ] `dev-app` Application: `Synced` + `Healthy`
+- [ ] Pod in `dev` namespace running `wil42/playground:v1`
+- [ ] `repoURL` includes `usrali2026` login
+- [ ] `path: p3/dev-app` in Application manifest
+- [ ] Auto-sync: `prune: true`, `selfHeal: true`
+- [ ] Live v1 → v2 switch works via `git push`
+- [ ] Both `wil42/playground:v1` and `:v2` exist on Docker Hub
+
+
+### Bonus
+
+- [ ] Config files in `bonus/confs/` and `bonus/scripts/`
+- [ ] GitLab running in `gitlab` namespace
+- [ ] All 3 namespaces: `argocd`, `dev`, `gitlab`
+- [ ] GitLab UI accessible at `http://localhost:8080`
+- [ ] New repo `iot-app` created live with evaluator
+- [ ] Manifests pushed to GitLab repo
+- [ ] `argocd-app-gitlab.yaml` `repoURL` → internal GitLab DNS (not GitHub)
+- [ ] `dev-app` Application: `Synced` + `Healthy`
+- [ ] Live v1 → v2 switch via local GitLab push works
 
 ---
 
 ## 🔧 Troubleshooting
 
-### Vagrant libvirt Warnings
+### libvirt network not found
 
-If you see `[fog][WARNING] Unrecognized arguments: libvirt_ip_command` warnings:
-
-**Option 1:** Use the wrapper script:
 ```bash
-cd p1
-./vagrant-wrapper.sh status
-./vagrant-wrapper.sh up
+virsh net-list --all          # check status
+virsh net-start iot56         # start if inactive
 ```
 
-**Option 2:** Add to `~/.zshrc` or `~/.bashrc`:
+
+### Vagrant fog warnings
+
 ```bash
-unalias vagrant 2>/dev/null
+# Use wrapper or add to ~/.zshrc:
 vagrant() {
-  local tmpfile
-  tmpfile=$(mktemp)
-  command vagrant "$@" > "$tmpfile" 2>&1
-  local exit_code=$?
-  grep -v "\[fog\]\[WARNING\] Unrecognized arguments: libvirt_ip_command" "$tmpfile"
-  rm -f "$tmpfile"
-  return $exit_code
+  local tmp=$(mktemp)
+  command vagrant "$@" > "$tmp" 2>&1
+  local code=$?
+  grep -v "\[fog\]\[WARNING\] Unrecognized arguments: libvirt_ip_command" "$tmp"
+  rm -f "$tmp"
+  return $code
 }
 ```
 
-### Argo CD Not Syncing
 
-If Argo CD doesn't automatically sync after a Git push:
+### Argo CD not syncing after git push
 
 ```bash
-# Trigger manual refresh
-kubectl annotate application dev-app -n argocd argocd.argoproj.io/refresh=hard --overwrite
-
-# Check application status
-kubectl get application dev-app -n argocd -o yaml
-
-# Check repo server logs
-kubectl logs -n argocd -l app.kubernetes.io/name=argocd-repo-server --tail=50
+argocd app sync dev-app
+# or force refresh:
+kubectl annotate application dev-app -n argocd \
+  argocd.argoproj.io/refresh=hard --overwrite
 ```
 
-### K3d Cluster Issues
+
+### K3d cluster issues
 
 ```bash
-# List clusters
 k3d cluster list
-
-# Delete and recreate
 k3d cluster delete iot-p3
-k3d cluster create iot-p3 --servers 1 --agents 1
-
-# Check cluster status
-kubectl cluster-info
+bash p3/scripts/install_k3d_argocd.sh   # recreate
 ```
 
-### Network Issues (Part 1 & 2)
 
-If VMs can't reach each other:
+### GitLab pod CrashLoopBackOff (Bonus)
 
 ```bash
-# Check libvirt network
-virsh net-list
-virsh net-info iot56
-
-# Restart network
-virsh net-destroy iot56
-virsh net-start iot56
+kubectl get pods -n gitlab               # identify failing pod
+kubectl describe pod <pod-name> -n gitlab
+# Usually RAM: ensure host has ≥ 6GB free before starting bonus setup
+free -h
 ```
 
+
+### Docker permission denied (P3)
+
+```bash
+sudo usermod -aG docker $USER
+# Then log out and back in, or:
+exec sg docker bash
+```
+
+
 ---
 
-## 📚 Additional Resources
+## 📚 Resources
 
-- **K3s Documentation:** https://k3s.io/
-- **K3d Documentation:** https://k3d.io/
-- **Argo CD Documentation:** https://argo-cd.readthedocs.io/
-- **Vagrant libvirt:** https://github.com/vagrant-libvirt/vagrant-libvirt
+- [K3s Documentation](https://k3s.io/)
+- [K3d Documentation](https://k3d.io/)
+- [Argo CD Documentation](https://argo-cd.readthedocs.io/)
+- [GitLab Helm Chart](https://docs.gitlab.com/charts/)
+- [Vagrant libvirt](https://github.com/vagrant-libvirt/vagrant-libvirt)
 
 ---
 
-> This README is for quick setup and validation. For full requirements, see `en.subject_v4.0.pdf`.
-
-<div align="center">⁂</div>
+> For full requirements see `en.subject_v4.0.pdf`.
+> Evaluation checklist: `IoT_Evalsheet_UPDATED.pdf`.

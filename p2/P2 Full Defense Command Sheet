@@ -1,0 +1,57 @@
+# ── Pre-flight: host machine (BEFORE vagrant up) ──────────────────────
+virsh net-list --all
+# Must show:
+# iot56   active   yes
+
+# If inactive:
+virsh net-start iot56
+
+# ── Start up ──────────────────────────────────────────────────────────
+cd p2/
+vagrant up
+
+# ── Connect ───────────────────────────────────────────────────────────
+vagrant ssh alrahmouS
+
+# ── Evalsheet checks (run inside VM) ──────────────────────────────────
+
+# IP verification (evalsheet: use ip a, not ifconfig)
+ip a | grep 192.168.56.110
+
+# Hostname
+hostname
+# → alrahmouS
+
+# K3s server mode — must show BOTH active AND enabled
+sudo systemctl is-active k3s && sudo systemctl is-enabled k3s
+# → active
+# → enabled
+
+# Nodes
+kubectl get nodes -o wide
+# → alrahmouS   Ready   ...   192.168.56.110
+
+# All webapps resources (3 deploys, 3 services, 5 pods)
+kubectl get all -n webapps
+# → app1-deployment   1/1   Running
+# → app2-deployment   3/3   Running
+# → app3-deployment   1/1   Running
+# → app1-service, app2-service, app3-service
+
+# Traefik running
+kubectl -n kube-system get deploy,svc traefik
+# → traefik   1/1   Available
+
+# Ingress shows app1.com and app2.com
+kubectl -n webapps get ingress
+# → webapps-ingress   traefik   app1.com,app2.com
+
+# ── Ingress demo (memorize — evaluator won't give you the command) ─────
+curl -H 'Host: app1.com' http://192.168.56.110
+# → app1
+
+curl -H 'Host: app2.com' http://192.168.56.110
+# → app2
+
+curl http://192.168.56.110
+# → app3  (default — no Host header)
