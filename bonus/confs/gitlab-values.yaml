@@ -3,7 +3,7 @@ global:
     domain: localhost
     https: false
     gitlab:
-      name: localhost              # added: explicit host for correct URL generation
+      name: localhost          # main external host (you'll reach it via NodePort/Ingress)
       https: false
     registry:
       https: false
@@ -11,13 +11,13 @@ global:
   edition: ce
 
   kas:
-    enabled: false                 # added: disables KAS agent server (saves ~200MB RAM)
+    enabled: false             # no Kubernetes agent server (saves RAM)
 
   ingress:
-    enabled: false
+    enabled: false             # we expose via Service/NodePort, not ingress
     configureCertmanager: false
     tls:
-      enabled: false               # added: no TLS for local dev
+      enabled: false           # no TLS for local dev
 
   time_zone: UTC
 
@@ -30,34 +30,34 @@ certmanager-issuer:
   email: admin@localhost
 
 certmanager:
-  install: false                   # added: prevents cert-manager CRD conflicts
+  install: false               # no bundled cert-manager
 
 nginx-ingress:
-  enabled: false
+  enabled: false               # no bundled ingress controller
 
 prometheus:
-  install: false
+  install: false               # no bundled monitoring
 
 gitlab-runner:
-  install: false
+  install: false               # runners not needed for the subject
 
 registry:
-  enabled: false                   # changed: Docker Hub is used instead, saves ~300MB RAM
+  enabled: false               # use Docker Hub instead
 
 postgresql:
   image:
-    tag: 16.3.0                    # required for GitLab 18+
+    tag: 16.3.0                # compatible with recent GitLab releases[web:19]
   metrics:
     enabled: false
   persistence:
-    size: 4Gi                      # reduced from 8Gi, enough for local dev
+    size: 4Gi                  # enough for local/student use
 
 redis:
   metrics:
     enabled: false
   master:
     persistence:
-      size: 2Gi                    # reduced from 5Gi, Redis needs very little
+      size: 2Gi
 
 gitlab-shell:
   minReplicas: 1
@@ -74,7 +74,7 @@ sidekiq:
 gitaly:
   persistence:
     enabled: true
-    size: 5Gi                      # reduced from 10Gi
+    size: 5Gi
 
 minio:
   persistence:
