@@ -1,21 +1,14 @@
-# p1/Vagrantfile
-# Inception-of-Things (IoT) - Part 1
-# 2 machines via Vagrant: alrahmouS (server) and alrahmouSW (worker)
-# Required IPs: 192.168.56.110 / 192.168.56.111 [file:1]
+# p1/Vagrantfile — fixed TTY and fog warning
 
 CLUSTER_TOKEN = "IOT42ClusterToken"
 
 Vagrant.configure("2") do |config|
-  # "latest stable" distro: pick what you want; 24.04 is a safe choice. [file:1]
   config.vm.box = "bento/ubuntu-24.04"
-
-  # Keep default vagrant key behavior (passwordless `vagrant ssh`). [file:1]
   config.ssh.insert_key = false
 
-  # ---- SERVER (controller) ----
+  # ---- SERVER ----
   config.vm.define "alrahmouS" do |srv|
-    srv.vm.hostname = "alrahmouS" # login + "S" [file:1]
-
+    srv.vm.hostname = "alrahmouS"
     srv.vm.network "private_network",
       ip: "192.168.56.110",
       libvirt__network_name: "iot56",
@@ -23,7 +16,9 @@ Vagrant.configure("2") do |config|
 
     srv.vm.provider :libvirt do |v|
       v.cpus   = 1
-      v.memory = 1024 # 512 can work, 1024 is safer for k3s [file:1]
+      v.memory = 1024
+      # Force SSH to allocate a TTY
+      v.ssh_extra_args = ["-t"]
     end
 
     srv.vm.provision "shell",
@@ -34,10 +29,9 @@ Vagrant.configure("2") do |config|
       }
   end
 
-  # ---- WORKER (agent) ----
+  # ---- WORKER ----
   config.vm.define "alrahmouSW" do |wrk|
-    wrk.vm.hostname = "alrahmouSW" # login + "SW" [file:1]
-
+    wrk.vm.hostname = "alrahmouSW"
     wrk.vm.network "private_network",
       ip: "192.168.56.111",
       libvirt__network_name: "iot56",
@@ -46,6 +40,8 @@ Vagrant.configure("2") do |config|
     wrk.vm.provider :libvirt do |v|
       v.cpus   = 1
       v.memory = 1024
+      # Force SSH to allocate a TTY
+      v.ssh_extra_args = ["-t"]
     end
 
     wrk.vm.provision "shell",
