@@ -18,3 +18,7 @@ kubeconfig*
 *.kubeconfig
 .argocd/
 p3/kubectl
+
+# Local-only workspace files
+assets/en.subject-IoT.pdf
+assets/p3 password
