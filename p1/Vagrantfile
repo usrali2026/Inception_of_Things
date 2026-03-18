@@ -1,4 +1,4 @@
-# p1/Vagrantfile — fixed TTY and fog warning
+# p1/Vagrantfile
 
 CLUSTER_TOKEN = "IOT42ClusterToken"
 
