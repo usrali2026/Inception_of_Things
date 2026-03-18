@@ -17,8 +17,6 @@ Vagrant.configure("2") do |config|
     srv.vm.provider :libvirt do |v|
       v.cpus   = 1
       v.memory = 1024
-      # Force SSH to allocate a TTY
-      v.ssh_extra_args = ["-t"]
     end
 
     srv.vm.provision "shell",
@@ -40,8 +38,6 @@ Vagrant.configure("2") do |config|
     wrk.vm.provider :libvirt do |v|
       v.cpus   = 1
       v.memory = 1024
-      # Force SSH to allocate a TTY
-      v.ssh_extra_args = ["-t"]
     end
 
     wrk.vm.provision "shell",
@@ -53,3 +49,4 @@ Vagrant.configure("2") do |config|
       }
   end
 end
+
