@@ -1,0 +1,31 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/ubuntu2204"
+  config.vm.synced_folder ".", "/vagrant", type: "rsync",
+    rsync__exclude: [".git/"]
+
+  config.vm.define "alrahmouS" do |server|
+    server.vm.hostname = "alrahmouS"
+    server.vm.network "private_network", ip: "10.0.56.110",
+      libvirt__network_name: "iot-net",
+      libvirt__dhcp_enabled: false,
+      libvirt__forward_mode: "none"
+    server.vm.provider "libvirt" do |v|
+      v.memory = 1024
+      v.cpus   = 1
+    end
+    server.vm.provision "shell", path: "scripts/server.sh"
+  end
+
+  config.vm.define "alrahmouSW" do |worker|
+    worker.vm.hostname = "alrahmouSW"
+    worker.vm.network "private_network", ip: "10.0.56.111",
+      libvirt__network_name: "iot-net",
+      libvirt__dhcp_enabled: false,
+      libvirt__forward_mode: "none"
+    worker.vm.provider "libvirt" do |v|
+      v.memory = 1024
+      v.cpus   = 1
+    end
+    worker.vm.provision "shell", path: "scripts/worker.sh"
+  end
+end
