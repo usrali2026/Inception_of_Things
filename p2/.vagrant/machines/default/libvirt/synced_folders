@@ -1,1 +1,0 @@
-{"rsync":{"/vagrant":{"disabled":false,"guestpath":"/vagrant","hostpath":"/home/ali/IoT/p2","type":"rsync","rsync__exclude":[".git/"],"__vagrantfile":true,"exclude":[".git/"],"owner":"vagrant","group":"vagrant"}}}
